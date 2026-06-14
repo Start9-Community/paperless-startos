@@ -5,6 +5,7 @@ import { versionGraph } from '../versions'
 import { actions } from '../actions'
 import { restoreInit } from '../backups'
 import { seedStore } from './seedStore'
+import { bootstrapDatabase } from './bootstrapDatabase'
 import { watchCredentials } from './watchCredentials'
 
 export const init = sdk.setupInit(
@@ -14,6 +15,7 @@ export const init = sdk.setupInit(
   setInterfaces,
   setDependencies,
   actions,
+  bootstrapDatabase,
   watchCredentials,
 )
 

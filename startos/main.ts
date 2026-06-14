@@ -1,9 +1,15 @@
+import { T } from '@start9labs/start-sdk'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
 import { sdk } from './sdk'
 import { paperlessMounts, redisPort, uiPort } from './utils'
 
-export const main = sdk.setupMain(async ({ effects }) => {
+// The redis + paperless daemon chain. setupMain returns it to run the service;
+// bootstrapDatabase (on install) calls .runUntilSuccess() on the same chain so
+// Paperless migrates and creates its database before the first real start —
+// which lets the critical Set Admin Password task succeed against an existing DB
+// instead of erroring on a never-started install.
+export async function paperlessDaemons(effects: T.Effects) {
   const secretKey = await storeJson.read((s) => s.secretKey).const(effects)
   if (!secretKey) {
     throw new Error('store.json is missing the generated secret key')
@@ -80,4 +86,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
       },
       requires: ['redis'],
     })
-})
+}
+
+export const main = sdk.setupMain(async ({ effects }) =>
+  paperlessDaemons(effects),
+)

@@ -35,16 +35,16 @@ Redis runs in an ephemeral subcontainer with persistence disabled — task state
 
 ## Installation and First-Run Flow
 
-1. Install the package. The install hook (`seedStore`) generates a random `PAPERLESS_SECRET_KEY` into `store.json`; no admin password exists yet.
-2. The init watcher (`watchCredentials`) surfaces a **critical task** pointing at the **Set Admin Password** action whenever no password is stored.
-3. Start the service. On first boot the container runs migrations and creates the database — but no superuser (the upstream env-based `manage_superuser` path is unused; it is create-only and cannot rotate, see below).
-4. Run **Set Admin Password**. The action spins up a temporary subcontainer, creates-or-updates the `admin` superuser via `manage.py shell` (`set_password`), stores the password in `store.json` (which clears the task), and displays the credentials. Re-running it any time rotates the password — the same action covers first-set and reset.
+1. Install the package. The install hook (`seedStore`) generates a random `PAPERLESS_SECRET_KEY` into `store.json`; no admin password exists yet. Then `bootstrapDatabase` boots the redis + paperless chain once via `runUntilSuccess` — Paperless runs its migrations and creates the database, then everything is torn down. The database now exists before the service is ever started normally. (No superuser is created here; the upstream env-based `manage_superuser` path is unused — it is create-only and cannot rotate.)
+2. The init watcher (`watchCredentials`) surfaces a **critical task** pointing at the **Set Admin Password** action whenever no password is stored. A `critical` task blocks startup until the user completes it. This is deadlock-free only because step 1 already created the database, so the action below succeeds while the service is stopped — making it `critical` *without* that bootstrap would deadlock (the action needs the DB; the DB would need a start the task forbids).
+3. Run **Set Admin Password**. The action spins up a temporary subcontainer, creates-or-updates the `admin` superuser via `manage.py shell` (`set_password`) against the database from step 1, stores the password in `store.json` (which clears the task), and displays the credentials. Re-running it any time rotates the password — the same action covers first-set and reset.
+4. Start the service and sign in as `admin`.
 
 ## Actions (StartOS UI)
 
 | Action ID            | What it does                                                                  |
 | -------------------- | ----------------------------------------------------------------------------- |
-| `set-admin-password` | Generate and apply a new password for the `admin` superuser; first-set and reset. Errors with guidance if run before the database has been initialized (first start). |
+| `set-admin-password` | Generate and apply a new password for the `admin` superuser; first-set and reset. Errors with guidance in the unlikely event the database has not been initialized. |
 
 ## Network Access and Interfaces
 

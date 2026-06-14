@@ -4,8 +4,8 @@ Paperless-ngx is a document management system that scans, indexes, and archives 
 
 ## First-run setup
 
-1. Start the service and wait for the **Web Interface** health check to turn green. The first start may take a minute or two while databases are migrated and OCR resources are unpacked.
-2. Run the **Set Admin Password** action — it is surfaced as a critical task until you do. It generates a password for the `admin` user and displays it once; copy it somewhere safe.
+1. Run the **Set Admin Password** action — it is surfaced as a critical task that must be completed before the service will start. It generates a password for the `admin` user and displays it once; copy it somewhere safe.
+2. Start the service and wait for the **Web Interface** health check to turn green. The first start may take a minute or two while OCR resources are unpacked.
 3. Open the **Web UI** interface and sign in as `admin`.
 
 Forgot your password, or want a new one? Run **Set Admin Password** again at any time — it resets the `admin` password and shows you the new one.
