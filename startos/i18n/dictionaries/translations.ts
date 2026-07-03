@@ -18,6 +18,7 @@ export default {
     13: 'Nombre de usuario',
     14: 'Contraseña',
     15: 'Establece la contraseña de administrador antes de iniciar sesión en Paperless-ngx',
+    16: 'Inicializando la base de datos de Paperless-ngx',
   },
   de_DE: {
     0: 'Aufgaben-Broker',
@@ -36,6 +37,7 @@ export default {
     13: 'Benutzername',
     14: 'Passwort',
     15: 'Lege das Admin-Passwort fest, bevor du dich bei Paperless-ngx anmeldest',
+    16: 'Paperless-ngx-Datenbank wird initialisiert',
   },
   pl_PL: {
     0: 'Broker zadań',
@@ -54,6 +56,7 @@ export default {
     13: 'Nazwa użytkownika',
     14: 'Hasło',
     15: 'Ustaw hasło administratora przed zalogowaniem się do Paperless-ngx',
+    16: 'Inicjowanie bazy danych Paperless-ngx',
   },
   fr_FR: {
     0: 'File de tâches',
@@ -72,5 +75,6 @@ export default {
     13: "Nom d'utilisateur",
     14: 'Mot de passe',
     15: 'Définissez le mot de passe admin avant de vous connecter à Paperless-ngx',
+    16: 'Initialisation de la base de données de Paperless-ngx',
   },
 } satisfies Record<string, LangDict>
