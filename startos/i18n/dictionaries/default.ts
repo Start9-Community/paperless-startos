@@ -24,6 +24,9 @@ const dict = {
 
   // init/watchCredentials.ts
   'Set the admin password before signing in to Paperless-ngx': 15,
+
+  // init/bootstrapDatabase.ts
+  'Initializing Paperless-ngx database': 16,
 } as const
 
 /**

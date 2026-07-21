@@ -1,6 +1,7 @@
 import { T } from '@start9labs/start-sdk'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
+import { uiHostId, uiInterfaceId } from './interfaces'
 import { sdk } from './sdk'
 import { paperlessMounts, redisPort, uiPort } from './utils'
 
@@ -16,14 +17,21 @@ export async function paperlessDaemons(effects: T.Effects) {
   }
 
   const trustedOrigins = (
-    (await sdk.serviceInterface
-      .getOwn(effects, 'ui', (i) => i?.addressInfo?.format('urlstring') ?? [])
-      .const()) || []
+    await sdk.host
+      .getOwn(effects, uiHostId, (host) => {
+        const iface =
+          host &&
+          Object.values(host.bindings)
+            .flatMap((b) => Object.values(b.interfaces))
+            .find((i) => i.id === uiInterfaceId)
+        return iface ? iface.addressInfo.format('urlstring') : []
+      })
+      .const()
   ).join(',')
 
   return sdk.Daemons.of(effects)
     .addDaemon('redis', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'redis' },
         null,
@@ -53,7 +61,7 @@ export async function paperlessDaemons(effects: T.Effects) {
       requires: [],
     })
     .addDaemon('paperless', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'paperless' },
         paperlessMounts,

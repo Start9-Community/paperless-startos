@@ -1,13 +1,13 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '2.20.15:1',
+  version: '2.20.15:2',
   releaseNotes: {
-    en_US: 'Initial Paperless-ngx package for StartOS.',
-    es_ES: 'Paquete inicial de Paperless-ngx para StartOS.',
-    de_DE: 'Erstes Paperless-ngx-Paket für StartOS.',
-    pl_PL: 'Początkowa wersja pakietu Paperless-ngx dla StartOS.',
-    fr_FR: 'Premier paquet Paperless-ngx pour StartOS.',
+    en_US: 'Internal updates (start-sdk 2.0.x)',
+    es_ES: 'Actualizaciones internas (start-sdk 2.0.x)',
+    de_DE: 'Interne Aktualisierungen (start-sdk 2.0.x)',
+    pl_PL: 'Aktualizacje wewnętrzne (start-sdk 2.0.x)',
+    fr_FR: 'Mises à jour internes (start-sdk 2.0.x)',
   },
   migrations: {
     up: async () => {},
