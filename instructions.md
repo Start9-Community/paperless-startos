@@ -16,7 +16,7 @@ Forgot your password, or want a new one? Run **Set Admin Password** again at any
 - **Email**: configure a mail account under **Settings → Mail** in the Paperless-ngx UI and it will fetch and consume attachments automatically — handy for scanners that scan-to-email.
 - **Mobile apps and API**: any Paperless-ngx-compatible app can upload via the API using your Web UI address and an API token from your user profile.
 
-> **Note**: The watched *consume folder* lives on a volume that is not reachable from other StartOS services or your other devices today, so use one of the methods above instead.
+> **Note**: The watched _consume folder_ lives on a volume that is not reachable from other StartOS services or your other devices today, so use one of the methods above instead.
 
 ## Documentation
 
