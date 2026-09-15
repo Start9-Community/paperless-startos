@@ -13,10 +13,11 @@ Forgot your password, or want a new one? Run **Set Admin Password** again at any
 ## Adding documents
 
 - **Web upload**: use the drag-and-drop area in the Paperless-ngx UI.
+- **Consume folder in FileBrowser Quantum**: run the **Set Consume Folder** action, choose **FileBrowser Quantum**, and pick a subfolder (the default is `paperless`). Paperless-ngx watches that folder, imports anything you drop into it, and then deletes the file. FileBrowser Quantum must be installed (if you install it afterwards, restart Paperless-ngx); the subfolder is created for you. If you also have Nextcloud with FileBrowser Quantum mounted as external storage, dropping a file into that folder from Nextcloud works the same way.
 - **Email**: configure a mail account under **Settings → Mail** in the Paperless-ngx UI and it will fetch and consume attachments automatically — handy for scanners that scan-to-email.
 - **Mobile apps and API**: any Paperless-ngx-compatible app can upload via the API using your Web UI address and an API token from your user profile.
 
-> **Note**: The watched _consume folder_ lives on a volume that is not reachable from other StartOS services or your other devices today, so use one of the methods above instead.
+Changing the consume folder restarts Paperless-ngx.
 
 ## Documentation
 

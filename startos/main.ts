@@ -1,34 +1,43 @@
-import { T } from '@start9labs/start-sdk'
+import { T, utils } from '@start9labs/start-sdk'
+import { manifest as filebrowserManifest } from 'filebrowser-startos/startos/manifest'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
 import { uiHostId, uiInterfaceId } from './interfaces'
 import { sdk } from './sdk'
-import { paperlessMounts, redisPort, uiPort } from './utils'
+import {
+  consumeMountpoint,
+  filebrowserMountpoint,
+  paperlessMounts,
+  redisPort,
+  uiPort,
+} from './utils'
+
+export const uiUrls = (host: utils.FilledHost | null) => {
+  const iface =
+    host &&
+    Object.values(host.bindings)
+      .flatMap((b) => Object.values(b.interfaces))
+      .find((i) => i.id === uiInterfaceId)
+  return iface ? iface.addressInfo.format('urlstring') : []
+}
 
 // The redis + paperless daemon chain. setupMain returns it to run the service;
 // bootstrapDatabase (on install) calls .runUntilSuccess() on the same chain so
 // Paperless migrates and creates its database before the first real start —
 // which lets the critical Set Admin Password task succeed against an existing DB
 // instead of erroring on a never-started install.
-export async function paperlessDaemons(effects: T.Effects) {
-  const secretKey = await storeJson.read((s) => s.secretKey).const(effects)
-  if (!secretKey) {
-    throw new Error('store.json is missing the generated secret key')
-  }
-
-  const trustedOrigins = (
-    await sdk.host
-      .getOwn(effects, uiHostId, (host) => {
-        const iface =
-          host &&
-          Object.values(host.bindings)
-            .flatMap((b) => Object.values(b.interfaces))
-            .find((i) => i.id === uiInterfaceId)
-        return iface ? iface.addressInfo.format('urlstring') : []
-      })
-      .const()
-  ).join(',')
-
+export function paperlessDaemons(
+  effects: T.Effects,
+  {
+    secretKey,
+    trustedOrigins,
+    filebrowserSubfolder,
+  }: {
+    secretKey: string
+    trustedOrigins: string
+    filebrowserSubfolder: string | null
+  },
+) {
   return sdk.Daemons.of(effects)
     .addDaemon('redis', {
       subcontainer: sdk.SubContainer.of(
@@ -64,7 +73,15 @@ export async function paperlessDaemons(effects: T.Effects) {
       subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'paperless' },
-        paperlessMounts,
+        filebrowserSubfolder
+          ? paperlessMounts.mountDependency<typeof filebrowserManifest>({
+              dependencyId: 'filebrowser',
+              volumeId: 'data',
+              subpath: null,
+              mountpoint: filebrowserMountpoint,
+              readonly: false,
+            })
+          : paperlessMounts,
         'paperless-app',
       ),
       exec: {
@@ -79,6 +96,9 @@ export async function paperlessDaemons(effects: T.Effects) {
           PAPERLESS_CSRF_TRUSTED_ORIGINS: trustedOrigins,
           PAPERLESS_TIME_ZONE: 'UTC',
           PAPERLESS_OCR_LANGUAGE: 'eng',
+          PAPERLESS_CONSUMPTION_DIR: filebrowserSubfolder
+            ? `${filebrowserMountpoint}/${filebrowserSubfolder}`
+            : consumeMountpoint,
           USERMAP_UID: '1000',
           USERMAP_GID: '1000',
         },
@@ -96,6 +116,20 @@ export async function paperlessDaemons(effects: T.Effects) {
     })
 }
 
-export const main = sdk.setupMain(async ({ effects }) =>
-  paperlessDaemons(effects),
-)
+export const main = sdk.setupMain(async ({ effects }) => {
+  const secretKey = await storeJson.read((s) => s.secretKey).const(effects)
+  if (!secretKey) {
+    throw new Error('store.json is missing the generated secret key')
+  }
+  return paperlessDaemons(effects, {
+    secretKey,
+    trustedOrigins: (
+      await sdk.host.getOwn(effects, uiHostId, uiUrls).const()
+    ).join(','),
+    filebrowserSubfolder: await storeJson
+      .read((s) =>
+        s.consumeSource === 'filebrowser' ? s.filebrowserSubfolder : null,
+      )
+      .const(effects),
+  })
+})

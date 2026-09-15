@@ -1,5 +1,7 @@
+import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
-import { paperlessDaemons } from '../main'
+import { uiHostId } from '../interfaces'
+import { paperlessDaemons, uiUrls } from '../main'
 import { sdk } from '../sdk'
 
 export const bootstrapDatabase = sdk.setupOnInit(
@@ -15,8 +17,18 @@ export const bootstrapDatabase = sdk.setupOnInit(
     // on first boot can take a while on slower hardware.
     const phase = progress.addPhase(i18n('Initializing Paperless-ngx database'))
     phase.start()
-    const daemons = await paperlessDaemons(effects)
-    await daemons.runUntilSuccess(300_000)
+    // .once(): a .const() here would re-run the bootstrap against the live service.
+    const secretKey = await storeJson.read((s) => s.secretKey).once()
+    if (!secretKey) {
+      throw new Error('store.json is missing the generated secret key')
+    }
+    await paperlessDaemons(effects, {
+      secretKey,
+      trustedOrigins: (
+        await sdk.host.getOwn(effects, uiHostId, uiUrls).once()
+      ).join(','),
+      filebrowserSubfolder: null,
+    }).runUntilSuccess(300_000)
     phase.complete()
   },
 )
