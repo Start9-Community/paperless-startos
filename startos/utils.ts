@@ -7,6 +7,9 @@ export const uiPort = 8000
 export const redisPort = 6379
 
 export const dataMountpoint = '/usr/src/paperless/data'
+export const consumeMountpoint = '/usr/src/paperless/consume'
+export const filebrowserMountpoint = '/mnt/filebrowser'
+export const defaultConsumeSubfolder = 'paperless'
 export const srcDir = '/usr/src/paperless/src'
 
 // Both the main daemon and the set-admin-password action mount the same set of
@@ -28,7 +31,7 @@ export const paperlessMounts = sdk.Mounts.of()
   .mountVolume({
     volumeId: 'main',
     subpath: 'consume',
-    mountpoint: '/usr/src/paperless/consume',
+    mountpoint: consumeMountpoint,
     readonly: false,
   })
   .mountVolume({

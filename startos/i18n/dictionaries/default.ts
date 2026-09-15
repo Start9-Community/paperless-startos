@@ -27,6 +27,16 @@ const dict = {
 
   // init/bootstrapDatabase.ts
   'Initializing Paperless-ngx database': 16,
+
+  // actions/setConsumeFolder.ts
+  'Consume Folder': 17,
+  'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.': 18,
+  'Private (web upload only)': 19,
+  'FileBrowser Quantum': 20,
+  'FileBrowser Quantum Subfolder': 21,
+  'Folder inside FileBrowser Quantum that Paperless-ngx watches. Created automatically; FileBrowser Quantum must be installed.': 22,
+  'Set Consume Folder': 23,
+  'Choose where Paperless-ngx watches for new documents: a private folder, or a folder in FileBrowser Quantum you can drop files into.': 24,
 } as const
 
 /**
