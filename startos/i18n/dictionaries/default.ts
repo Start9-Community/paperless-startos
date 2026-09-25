@@ -36,7 +36,13 @@ const dict = {
   'FileBrowser Quantum Subfolder': 21,
   'Folder inside FileBrowser Quantum that Paperless-ngx watches. Created automatically; FileBrowser Quantum must be installed.': 22,
   'Set Consume Folder': 23,
-  'Choose where Paperless-ngx watches for new documents: a private folder, or a folder in FileBrowser Quantum you can drop files into.': 24,
+  'Choose where Paperless-ngx watches for new documents: a private folder, or a folder in FileBrowser Quantum or NextExplorer you can drop files into.': 24,
+  NextExplorer: 25,
+  'NextExplorer Location': 26,
+  'Location in NextExplorer that Paperless-ngx watches. Added to NextExplorer if it does not exist; NextExplorer must be installed.': 27,
+  'Install NextExplorer first': 28,
+  'Consume Folder Set': 29,
+  'Paperless-ngx now watches the ${location} location in NextExplorer. NextExplorer accounts other than the admin see it only once you add it in their Volumes tab.': 30,
 } as const
 
 /**
