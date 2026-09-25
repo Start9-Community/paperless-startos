@@ -1,5 +1,10 @@
 import { setupManifest } from '@start9labs/start-sdk'
-import { filebrowserDescription, long, short } from './i18n'
+import {
+  filebrowserDescription,
+  long,
+  nextexplorerDescription,
+  short,
+} from './i18n'
 
 export const manifest = setupManifest({
   id: 'paperless-ngx',
@@ -28,6 +33,14 @@ export const manifest = setupManifest({
       metadata: {
         title: 'FileBrowser Quantum',
         icon: 'https://raw.githubusercontent.com/Start9Labs/filebrowser-quantum-startos/e936a6c85a97b930b43cad5e9c0dd4898a2df567/icon.svg',
+      },
+    },
+    nextexplorer: {
+      description: nextexplorerDescription,
+      optional: true,
+      metadata: {
+        title: 'NextExplorer',
+        icon: 'https://raw.githubusercontent.com/Start9Labs/nextexplorer-startos/c0539454628fffa7873841cbd286b20174acd33b/icon.svg',
       },
     },
   },

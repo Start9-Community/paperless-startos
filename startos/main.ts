@@ -1,5 +1,6 @@
 import { T, utils } from '@start9labs/start-sdk'
 import { manifest as filebrowserManifest } from 'filebrowser-startos/startos/manifest'
+import { manifest as nextexplorerManifest } from 'nextexplorer-startos/startos/manifest'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
 import { uiHostId, uiInterfaceId } from './interfaces'
@@ -7,6 +8,7 @@ import { sdk } from './sdk'
 import {
   consumeMountpoint,
   filebrowserMountpoint,
+  nextexplorerMountpoint,
   paperlessMounts,
   redisPort,
   uiPort,
@@ -31,11 +33,14 @@ export function paperlessDaemons(
   {
     secretKey,
     trustedOrigins,
-    filebrowserSubfolder,
+    consumeFolder,
   }: {
     secretKey: string
     trustedOrigins: string
-    filebrowserSubfolder: string | null
+    consumeFolder:
+      | { source: 'filebrowser'; subfolder: string }
+      | { source: 'nextexplorer'; location: string }
+      | null
   },
 ) {
   return sdk.Daemons.of(effects)
@@ -73,7 +78,7 @@ export function paperlessDaemons(
       subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'paperless' },
-        filebrowserSubfolder
+        consumeFolder?.source === 'filebrowser'
           ? paperlessMounts.mountDependency<typeof filebrowserManifest>({
               dependencyId: 'filebrowser',
               volumeId: 'data',
@@ -81,7 +86,15 @@ export function paperlessDaemons(
               mountpoint: filebrowserMountpoint,
               readonly: false,
             })
-          : paperlessMounts,
+          : consumeFolder?.source === 'nextexplorer'
+            ? paperlessMounts.mountDependency<typeof nextexplorerManifest>({
+                dependencyId: 'nextexplorer',
+                volumeId: 'data',
+                subpath: null,
+                mountpoint: nextexplorerMountpoint,
+                readonly: false,
+              })
+            : paperlessMounts,
         'paperless-app',
       ),
       exec: {
@@ -96,9 +109,12 @@ export function paperlessDaemons(
           PAPERLESS_CSRF_TRUSTED_ORIGINS: trustedOrigins,
           PAPERLESS_TIME_ZONE: 'UTC',
           PAPERLESS_OCR_LANGUAGE: 'eng',
-          PAPERLESS_CONSUMPTION_DIR: filebrowserSubfolder
-            ? `${filebrowserMountpoint}/${filebrowserSubfolder}`
-            : consumeMountpoint,
+          PAPERLESS_CONSUMPTION_DIR:
+            consumeFolder?.source === 'filebrowser'
+              ? `${filebrowserMountpoint}/${consumeFolder.subfolder}`
+              : consumeFolder?.source === 'nextexplorer'
+                ? `${nextexplorerMountpoint}/${consumeFolder.location}`
+                : consumeMountpoint,
           USERMAP_UID: '1000',
           USERMAP_GID: '1000',
         },
@@ -126,9 +142,19 @@ export const main = sdk.setupMain(async ({ effects }) => {
     trustedOrigins: (
       await sdk.host.getOwn(effects, uiHostId, uiUrls).const()
     ).join(','),
-    filebrowserSubfolder: await storeJson
+    consumeFolder: await storeJson
       .read((s) =>
-        s.consumeSource === 'filebrowser' ? s.filebrowserSubfolder : null,
+        s.consumeSource === 'filebrowser'
+          ? {
+              source: 'filebrowser' as const,
+              subfolder: s.filebrowserSubfolder,
+            }
+          : s.consumeSource === 'nextexplorer'
+            ? {
+                source: 'nextexplorer' as const,
+                location: s.nextexplorerLocation,
+              }
+            : null,
       )
       .const(effects),
   })

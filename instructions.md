@@ -14,6 +14,7 @@ Forgot your password, or want a new one? Run **Set Admin Password** again at any
 
 - **Web upload**: use the drag-and-drop area in the Paperless-ngx UI.
 - **Consume folder in FileBrowser Quantum**: run the **Set Consume Folder** action, choose **FileBrowser Quantum**, and pick a subfolder (the default is `paperless`). Paperless-ngx watches that folder, imports anything you drop into it, and then deletes the file. FileBrowser Quantum must be installed (if you install it afterwards, restart Paperless-ngx); the subfolder is created for you. If you also have Nextcloud with FileBrowser Quantum mounted as external storage, dropping a file into that folder from Nextcloud works the same way.
+- **Consume folder in NextExplorer**: run the **Set Consume Folder** action, choose **NextExplorer**, and pick a location (the default is `Paperless`). NextExplorer must be installed first; the location is added to NextExplorer for you. NextExplorer's admin sees it straight away; to let another NextExplorer account drop files into it, add the location in that account's **Volumes** tab. Nextcloud shows NextExplorer's locations as external storage, so dropping a file into it from Nextcloud works too.
 - **Email**: configure a mail account under **Settings → Mail** in the Paperless-ngx UI and it will fetch and consume attachments automatically — handy for scanners that scan-to-email.
 - **Mobile apps and API**: any Paperless-ngx-compatible app can upload via the API using your Web UI address and an API token from your user profile.
 
