@@ -8,7 +8,7 @@ Paperless-ngx is a document management system that scans, indexes, and archives 
 2. Start the service and wait for the **Web Interface** health check to turn green. The first start may take a minute or two while OCR resources are unpacked.
 3. Open the **Web UI** interface and sign in as `admin`.
 
-Forgot your password, or want a new one? Run **Set Admin Password** again at any time — it resets the `admin` password and shows you the new one.
+Forgot your password, or want a new one? Run **Set Admin Password** again at any time — after asking you to confirm, it resets the `admin` password and shows you the new one.
 
 ## Adding documents
 

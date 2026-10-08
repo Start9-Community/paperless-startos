@@ -30,13 +30,14 @@ const dict = {
 
   // actions/setConsumeFolder.ts
   'Consume Folder': 17,
-  'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.': 18,
+  'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.\n- Private (web upload only): a folder no other service can reach; add documents through the web interface, email or the API.\n- FileBrowser Quantum: a folder in FileBrowser Quantum that you can drop documents into. FileBrowser Quantum must be installed.': 18,
   'Private (web upload only)': 19,
   'FileBrowser Quantum': 20,
   'FileBrowser Quantum Subfolder': 21,
   'Folder inside FileBrowser Quantum that Paperless-ngx watches. Created automatically; FileBrowser Quantum must be installed.': 22,
   'Set Consume Folder': 23,
   'Choose where Paperless-ngx watches for new documents: a private folder, or a folder in FileBrowser Quantum you can drop files into.': 24,
+  'Gives the admin account a new password. Its current password stops working, and the new one is shown only once.': 25,
 } as const
 
 /**
