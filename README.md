@@ -203,6 +203,7 @@ Note that the intake and export folders are backed up along with everything else
 6. **The timezone is fixed to UTC** and OCR is configured for English; other languages are set in Paperless's own settings.
 7. **Backups include the intake and export folders**, not just the library.
 8. **The consume folder can be shared only through FileBrowser Quantum**, and only one folder is watched, non-recursively. Paperless's own document store (`media`) is not exposed to other services.
+9. **On x86_64 the CPU must support SSE4.2.** The document classifier crashes the worker on older CPUs.
 
 ---
 

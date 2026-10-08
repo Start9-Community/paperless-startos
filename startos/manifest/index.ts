@@ -13,7 +13,7 @@ export const manifest = setupManifest({
   volumes: ['main'],
   images: {
     paperless: {
-      source: { dockerTag: 'ghcr.io/paperless-ngx/paperless-ngx:2.20.15' },
+      source: { dockerTag: 'ghcr.io/paperless-ngx/paperless-ngx:3.3.0' },
       arch: ['x86_64', 'aarch64'],
       emulateMissing: false,
     },
