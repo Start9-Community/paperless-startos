@@ -2,7 +2,7 @@ import { FileHelper, z } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
 import { defaultConsumeSubfolder } from '../utils'
 
-const shape = z.object({
+const shape = z.looseObject({
   adminPassword: z.string().catch(''),
   // Generated once at install and not rotatable: changing it invalidates every
   // session and anything else Django derived from it.

@@ -9,7 +9,7 @@ export const inputSpec = InputSpec.of({
   source: Value.union({
     name: i18n('Consume Folder'),
     description: i18n(
-      'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.',
+      'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.\n- Private (web upload only): a folder no other service can reach; add documents through the web interface, email or the API.\n- FileBrowser Quantum: a folder in FileBrowser Quantum that you can drop documents into. FileBrowser Quantum must be installed.',
     ),
     default: 'local',
     variants: Variants.of({

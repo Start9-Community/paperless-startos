@@ -7,12 +7,16 @@ import { dataMountpoint, paperlessMounts, srcDir } from '../utils'
 export const setAdminPassword = sdk.Action.withoutInput(
   'set-admin-password',
 
-  async () => ({
+  async ({ effects }) => ({
     name: i18n('Set Admin Password'),
     description: i18n(
       'Generate a new password for the Paperless-ngx "admin" user. Run this action to set the initial password or to reset a forgotten one.',
     ),
-    warning: null,
+    warning: (await storeJson.read((s) => s.adminPassword).const(effects))
+      ? i18n(
+          'Gives the admin account a new password. Its current password stops working, and the new one is shown only once.',
+        )
+      : null,
     allowedStatuses: 'any',
     group: null,
     visibility: 'enabled',

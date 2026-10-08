@@ -1,5 +1,5 @@
 import { setupManifest } from '@start9labs/start-sdk'
-import { filebrowserDescription, long, short } from './i18n'
+import { long, short } from './i18n'
 
 export const manifest = setupManifest({
   id: 'paperless-ngx',
@@ -15,20 +15,12 @@ export const manifest = setupManifest({
     paperless: {
       source: { dockerTag: 'ghcr.io/paperless-ngx/paperless-ngx:2.20.15' },
       arch: ['x86_64', 'aarch64'],
+      emulateMissing: false,
     },
     redis: {
       source: { dockerTag: 'redis:8-alpine' },
       arch: ['x86_64', 'aarch64'],
-    },
-  },
-  dependencies: {
-    filebrowser: {
-      description: filebrowserDescription,
-      optional: true,
-      metadata: {
-        title: 'FileBrowser Quantum',
-        icon: 'https://raw.githubusercontent.com/Start9Labs/filebrowser-quantum-startos/e936a6c85a97b930b43cad5e9c0dd4898a2df567/icon.svg',
-      },
+      emulateMissing: false,
     },
   },
 })
