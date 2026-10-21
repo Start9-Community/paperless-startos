@@ -27,7 +27,7 @@ export const bootstrapDatabase = sdk.setupOnInit(
       trustedOrigins: (
         await sdk.host.getOwn(effects, uiHostId, uiUrls).once()
       ).join(','),
-      filebrowserSubfolder: null,
+      consumeFolder: null,
     }).runUntilSuccess(300_000)
     phase.complete()
   },

@@ -10,6 +10,8 @@ export const dataMountpoint = '/usr/src/paperless/data'
 export const consumeMountpoint = '/usr/src/paperless/consume'
 export const filebrowserMountpoint = '/mnt/filebrowser'
 export const defaultConsumeSubfolder = 'paperless'
+export const nextexplorerMountpoint = '/mnt/nextexplorer'
+export const defaultConsumeLocation = 'Paperless'
 export const srcDir = '/usr/src/paperless/src'
 
 // Both the main daemon and the set-admin-password action mount the same set of
