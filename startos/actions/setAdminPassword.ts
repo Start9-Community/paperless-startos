@@ -63,7 +63,14 @@ export const setAdminPassword = sdk.Action.withoutInput(
               'user.save()',
             ].join('\n'),
           ],
-          { cwd: srcDir, user: 'paperless' },
+          {
+            cwd: srcDir,
+            user: 'paperless',
+            env: {
+              PAPERLESS_SECRET_KEY:
+                (await storeJson.read((s) => s.secretKey).once()) ?? '',
+            },
+          },
         )
       },
     )
