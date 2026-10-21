@@ -30,7 +30,7 @@ const dict = {
 
   // actions/setConsumeFolder.ts
   'Consume Folder': 17,
-  'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.': 18,
+  'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.\n- Private (web upload only): a folder no other service can reach; add documents through the web interface, email or the API.\n- FileBrowser Quantum: a folder in FileBrowser Quantum that you can drop documents into. FileBrowser Quantum must be installed.\n- NextExplorer: a location in NextExplorer that you can drop documents into. NextExplorer must be installed.': 18,
   'Private (web upload only)': 19,
   'FileBrowser Quantum': 20,
   'FileBrowser Quantum Subfolder': 21,
@@ -43,6 +43,7 @@ const dict = {
   'Install NextExplorer first': 28,
   'Consume Folder Set': 29,
   'Paperless-ngx now watches the ${location} location in NextExplorer. NextExplorer accounts other than the admin see it only once you add it in their Volumes tab.': 30,
+  'Gives the admin account a new password. Its current password stops working, and the new one is shown only once.': 31,
 } as const
 
 /**

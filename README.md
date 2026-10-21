@@ -96,14 +96,14 @@ Paperless's own settings — document types, tags, mail rules, workflows — liv
 
 ## Dependencies
 
-Two, both optional, and each declared only while the consume folder points at it.
+Two, both optional, and each enabled only while the consume folder points at it.
 
 | Dependency          | Id             | Required | Kind     | Purpose                              |
 | ------------------- | -------------- | -------- | -------- | ------------------------------------ |
 | FileBrowser Quantum | `filebrowser`  | No       | `exists` | Hosts the consume folder, read-write |
 | NextExplorer        | `nextexplorer` | No       | `exists` | Hosts the consume folder, read-write |
 
-While the consume folder points at one of them, `setupDependencies` declares it as `exists` — it only has to be installed, not running, for the volume to be there — and StartOS shows the usual dependency warning if it is missing. With the private folder selected, no dependency is declared at all.
+While the consume folder points at one of them, `startos/dependencies.ts` enables it as an optional `exists` dependency — it only has to be installed, not running, for the volume to be there — and StartOS shows the usual dependency warning if it is missing. With the private folder selected, both dependencies are disabled.
 
 Redis runs as a private sidecar of this service rather than as a StartOS dependency.
 
@@ -147,6 +147,7 @@ Generates a password for the `admin` account and shows it once.
 - **Runnable at any status**, including stopped — which is the whole point, since the task that demands it blocks startup.
 - **Refuses clearly when the database is missing**, telling you to start the service and wait for it to become healthy, instead of failing with a Django traceback.
 - **Repeat safety:** each run generates a **new** password and invalidates the old one. It is never user-chosen.
+- **Asks for confirmation once a password has been set**, warning that the current password stops working. The first run, from the install task, does not ask.
 
 ### Set Consume Folder
 
@@ -245,7 +246,7 @@ startos_managed_env_vars:
   - USERMAP_UID
   - USERMAP_GID
 dependencies:
-  - { id: filebrowser, optional: true, kind: exists } # declared only while it is the consume source
+  - { id: filebrowser, optional: true, kind: exists } # enabled only while it is the consume source
   - { id: nextexplorer, optional: true, kind: exists } # same; set-consume-folder runs its add-location
 interfaces:
   ui: { type: ui, port: 8000 } # Paperless's own login; no gate added by StartOS

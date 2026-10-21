@@ -1,4 +1,4 @@
-import { setDependencies, nextexplorerVersionRange } from '../dependencies'
+import { dependencies, nextexplorerVersionRange } from '../dependencies'
 import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
@@ -10,7 +10,7 @@ export const inputSpec = InputSpec.of({
   source: Value.union({
     name: i18n('Consume Folder'),
     description: i18n(
-      'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.',
+      'Where Paperless-ngx watches for new documents. Anything placed there is imported and then deleted.\n- Private (web upload only): a folder no other service can reach; add documents through the web interface, email or the API.\n- FileBrowser Quantum: a folder in FileBrowser Quantum that you can drop documents into. FileBrowser Quantum must be installed.\n- NextExplorer: a location in NextExplorer that you can drop documents into. NextExplorer must be installed.',
     ),
     default: 'local',
     variants: Variants.of({
@@ -120,7 +120,7 @@ export const setConsumeFolder = sdk.Action.withInput(
         input: () => ({ name: location }),
       })
     } catch (e) {
-      await setDependencies(effects)
+      await dependencies.init(effects)
       throw e
     }
     await storeJson.merge(effects, {

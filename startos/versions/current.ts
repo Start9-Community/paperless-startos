@@ -1,7 +1,7 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '2.20.15:6',
+  version: '2.20.15:7',
   releaseNotes: {
     en_US: '**Set Consume Folder** can now watch a location in NextExplorer.',
     es_ES:

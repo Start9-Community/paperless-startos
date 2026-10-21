@@ -18,16 +18,23 @@ Freshly scaffolded? Work the
 guide page, not a file in this repo — read it, don't copy it in.
 
 Keep `README.md` (technical reference for an AI support or administering agent) and
-`instructions.md` (end-user docs) in sync with your changes.
+`instructions.md` (end-user docs) in sync with your changes. This file restates neither:
+whoever changes the package has both, so it carries only what they don't — repo mechanics,
+a change that looks right and is not, where the next thing gets added, a naming trap, a
+build or test invocation particular to this repo.
 
-**Bugs and feature requests are GitHub issues on this repo** — file them as you find them.
+**Fix a defect you spot rather than reporting it** — you have the package open and the
+context to be sure. File **a GitHub issue on this repo** only when the call isn't yours to
+make: you can't pin the cause down, two defensible fixes exist, or it's too large to ride on
+the work in hand. An open issue is a report, not a queue — implement one when you're asked
+to or when it's labelled `Approved`, then close it with `Closes #<n>`.
+
 Don't record work in the repo instead: no `TODO.md`, no `NOTES.md`, no `PLAN.md`. What you
 verified, tried, and decided belongs in the commit message and the PR body.
 
 ## This repo
 
-- **`PAPERLESS_CORS_ALLOWED_HOSTS`/`PAPERLESS_CSRF_TRUSTED_ORIGINS` are computed from the interface's current addresses.** StartOS terminates TLS upstream, so a stale or empty list makes login POSTs fail as a CSRF origin mismatch — which looks like a rejected password. Regenerating them each start is what makes a newly added address work after a restart.
-- **`runAsInit: true` is required.** The image supervises the web server, the task workers and the scheduler; with no init as PID 1 they aren't reaped or signalled.
-- **Redis persists nothing on purpose** (`--save ''`, `--appendonly no`, bound to loopback, no volume). It is a work queue; anything in it is re-derivable. Don't give it a volume "for safety".
-- **The action creates the `admin` user if absent**, with `is_staff`/`is_superuser`, and guards on `db.sqlite3` existing so a never-started install gets a clear message instead of a Django traceback.
 - **Default branch is `main`, not `master`.** Its CI workflows reference `main`; leave them.
+- **Don't make `PAPERLESS_CORS_ALLOWED_HOSTS`/`PAPERLESS_CSRF_TRUSTED_ORIGINS` static** — a list that misses the browser's origin rejects logins as CSRF failures, which looks like a wrong password.
+- **Keep `runAsInit: true` on the application daemon** — the image supervises its own web server, workers and scheduler.
+- **Don't give Redis a volume or turn its persistence on** — it is a work queue whose contents are re-derivable.
