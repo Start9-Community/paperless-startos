@@ -31,3 +31,16 @@ export const filebrowserDescription = {
   fr_FR:
     'Facultatif. Permet à Paperless-ngx de surveiller un dossier de FileBrowser Quantum, afin que les documents que vous y déposez soient importés automatiquement.',
 }
+
+export const nextexplorerDescription = {
+  en_US:
+    'Optional. Lets Paperless-ngx watch a location in NextExplorer, so documents you drop there are imported automatically.',
+  es_ES:
+    'Opcional. Permite que Paperless-ngx vigile una ubicación de NextExplorer, de modo que los documentos que dejes allí se importen automáticamente.',
+  de_DE:
+    'Optional. Lässt Paperless-ngx einen Standort in NextExplorer überwachen, sodass dort abgelegte Dokumente automatisch importiert werden.',
+  pl_PL:
+    'Opcjonalne. Pozwala Paperless-ngx obserwować lokalizację w NextExplorer, dzięki czemu umieszczone tam dokumenty są importowane automatycznie.',
+  fr_FR:
+    'Facultatif. Permet à Paperless-ngx de surveiller un emplacement de NextExplorer, afin que les documents que vous y déposez soient importés automatiquement.',
+}
