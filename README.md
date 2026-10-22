@@ -35,11 +35,11 @@
 
 ## Image and Container Runtime
 
-Two images: the application, and a Redis sidecar.
+Two images: the application, and a Redis sidecar. The root `Dockerfile` upgrades the application image's CA store and certifi, a temporary layer that comes out once upstream ships an image built on fixed stores.
 
 | Property      | Value                                             |
 | ------------- | ------------------------------------------------- |
-| Images        | `ghcr.io/paperless-ngx/paperless-ngx` and `redis` |
+| Images        | `ghcr.io/paperless-ngx/paperless-ngx` + root `Dockerfile`, and `redis` |
 | Architectures | x86_64, aarch64                                   |
 | Command       | Each image's own entrypoint                       |
 
@@ -216,7 +216,7 @@ Note that the intake and export folders are backed up along with everything else
 
 ```yaml
 package_id: paperless-ngx # note: the repo is paperless-startos
-image: ghcr.io/paperless-ngx/paperless-ngx # plus redis:8-alpine as a private sidecar
+image: ghcr.io/paperless-ngx/paperless-ngx + root Dockerfile (CA store upgrade) # plus redis:8-alpine as a private sidecar
 architectures:
   - x86_64
   - aarch64
