@@ -15,7 +15,7 @@ export const manifest = setupManifest({
     paperless: {
       source: {
         dockerBuild: {
-          buildArgs: { IMAGE: 'ghcr.io/paperless-ngx/paperless-ngx:3.3.0' },
+          buildArgs: { IMAGE: 'ghcr.io/paperless-ngx/paperless-ngx:3.3.4' },
         },
       },
       arch: ['x86_64', 'aarch64'],
