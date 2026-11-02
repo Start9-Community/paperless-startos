@@ -12,6 +12,7 @@ const shape = z.looseObject({
     .catch('local'),
   filebrowserSubfolder: z.string().catch(defaultConsumeSubfolder),
   nextexplorerLocation: z.string().catch(defaultConsumeLocation),
+  filenameFormat: z.string().catch(''),
 })
 
 export const storeJson = FileHelper.json(

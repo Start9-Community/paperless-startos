@@ -28,6 +28,7 @@ export const bootstrapDatabase = sdk.setupOnInit(
         await sdk.host.getOwn(effects, uiHostId, uiUrls).once()
       ).join(','),
       consumeFolder: null,
+      filenameFormat: '',
     }).runUntilSuccess(300_000)
     phase.complete()
   },

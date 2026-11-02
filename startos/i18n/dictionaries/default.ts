@@ -44,6 +44,21 @@ const dict = {
   'Consume Folder Set': 29,
   'Paperless-ngx now watches the ${location} location in NextExplorer. NextExplorer accounts other than the admin see it only once you add it in their Volumes tab.': 30,
   'Gives the admin account a new password. Its current password stops working, and the new one is shown only once.': 31,
+
+  // actions/setFilenameFormat.ts, actions/checkIntegrity.ts
+  'Filename Format': 32,
+  'A Paperless-ngx filename template, e.g. {{ created_year }}/{{ correspondent }}/{{ title }}. Leave empty for the default numbered names (0000042.pdf).': 33,
+  'Set Filename Format': 34,
+  'Choose how Paperless-ngx names and arranges stored documents. By default files are numbered (0000042.pdf); a format such as {{ created_year }}/{{ correspondent }}/{{ title }} gives a readable folder tree, which matters most when the documents are shared with another service. Storage paths set inside Paperless-ngx take precedence over this format.': 35,
+  'Paperless-ngx renames every stored document to match the new format. This can take a while on a large library, so back up first.': 36,
+  'Filename Format Set': 37,
+  'Stored documents were renamed to match the new format. Start Paperless-ngx to use it.': 38,
+  'Check Document Integrity': 39,
+  "Run Paperless-ngx's sanity checker: it reports documents whose files are missing or corrupted, and files no document refers to. Run it after restoring a backup.": 40,
+  'Integrity Check': 41,
+  'No errors were found. Any warnings are listed below.': 42,
+  'Problems were found. Details are listed below.': 43,
+  Report: 44,
 } as const
 
 /**

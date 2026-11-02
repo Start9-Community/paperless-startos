@@ -71,16 +71,16 @@ One volume, mounted four times at four different subpaths, plus an optional fift
 
 **The NextExplorer mount works the same way while the consume folder points there**: `PAPERLESS_CONSUMPTION_DIR` is the chosen location, `/mnt/nextexplorer/<location>`. NextExplorer also serves its volume as uid 1000.
 
-| Path         | Written by  | Holds                                                             |
-| ------------ | ----------- | ----------------------------------------------------------------- |
-| `db.sqlite3` | Paperless   | Documents' metadata, tags, users                                  |
-| `store.json` | The package | The admin password, the secret key, and the consume folder choice |
+| Path         | Written by  | Holds                                                                                 |
+| ------------ | ----------- | ------------------------------------------------------------------------------------- |
+| `db.sqlite3` | Paperless   | Documents' metadata, tags, users                                                      |
+| `store.json` | The package | The admin password, the secret key, the consume folder choice and the filename format |
 
 **Documents are files, and their metadata is a database.** Both are on this volume, and neither is much use without the other.
 
 ## File Models
 
-One model, holding two generated values and one user choice.
+One model, holding two generated values and two user choices.
 
 | File         | Format | Modelled                | Written by           |
 | ------------ | ------ | ----------------------- | -------------------- |
@@ -89,6 +89,7 @@ One model, holding two generated values and one user choice.
 - **The Django secret key**, generated once at install. It signs sessions and is not rotatable — changing it invalidates every session and anything else derived from it.
 - **The admin password**, recorded so the package knows whether one has been set.
 - **The consume folder** — `consumeSource` (`local`, `filebrowser` or `nextexplorer`), `filebrowserSubfolder` and `nextexplorerLocation`. Read reactively by the daemon and by the dependency declaration, so changing them restarts the service with the right mounts and re-evaluates the dependency.
+- **The filename format** — `filenameFormat`, empty by default. When set, it is passed to Paperless as `PAPERLESS_FILENAME_FORMAT`; when empty the variable is not set and documents keep numbered names.
 
 Everything else Paperless needs is **passed as environment**, and two of those values are computed rather than fixed: the allowed CORS origins and the CSRF trusted origins are built from the interface's **current addresses**. StartOS terminates TLS in front of the application, so without those the browser's origin would not match what Django expects and **logins would be rejected as CSRF failures** — which presents as a wrong password rather than a proxy problem.
 
@@ -135,7 +136,7 @@ After that, the `critical` task asks for the admin password. Once set, the servi
 
 ## Actions
 
-Two actions.
+Four actions.
 
 ### Set Admin Password
 
@@ -158,6 +159,26 @@ Chooses where Paperless watches for new documents: the private `consume` subpath
 - **Runnable at any status.** Selecting FileBrowser Quantum before it is installed still starts the service: StartOS mounts an empty placeholder where the volume would be, so Paperless watches a folder nothing can reach, and the dependency warning is the only sign. Install FileBrowser Quantum, then restart Paperless.
 - **NextExplorer:** refused unless NextExplorer is installed. The action declares the dependency, then runs NextExplorer's `add-location` itself (`access: 'dependent'`), which creates the location or accepts one that already exists, and writes the store only once that succeeds. A name NextExplorer rejects leaves the previous choice in place.
 - **Repeat safety:** switching away keeps the last subfolder and location, so each is pre-filled if selected again. Files left in any folder are not moved.
+
+### Set Filename Format
+
+Sets the template Paperless uses to name and arrange stored documents, for example `{{ created_year }}/{{ correspondent }}/{{ title }}`. Empty restores the default numbered names (`0000042.pdf`).
+
+- **What it changes:** `filenameFormat` in the store, and the name and folder of every stored document, through Paperless's own `document_renamer`.
+- **Runnable only while stopped.** The rename runs in a temporary container beside a throwaway Redis on the shared loopback, because the renamer clears Django's Redis-backed document caches for each document it moves and the service's Redis is not running. It has no timeout, since a large library outlasts the 30 s default.
+- **Cost:** time proportional to the library, then a restart for the daemon to pick up the variable. The renamer never overwrites or deletes a file.
+- **The store is written only after the rename succeeds**, so a failed run leaves the previous format recorded. A run that fails partway may already have moved some documents, whose database records moved with them; run the action again to finish, and Check Document Integrity to verify.
+- **Storage paths set inside Paperless take precedence** over this format for the documents they are assigned to. Documents without a correspondent land in a `none` folder and move out when one is assigned.
+- **Back up first** — the action warns before running.
+
+### Check Document Integrity
+
+Runs Paperless's `document_sanity_checker` and shows its report.
+
+- **Reports:** missing or corrupted original and archive files, missing or unreadable thumbnails, documents without content (warning), and files in the media folder that no document refers to (warning).
+- **Cost:** none beyond the run. It reads only, in a temporary container, with no timeout.
+- **Runnable only while stopped**, so no file is read mid-write.
+- **When to run it:** after restoring a backup, and after Set Filename Format.
 
 ## Tasks
 
@@ -233,7 +254,7 @@ dependency_mounts:
   filebrowser/data: /mnt/filebrowser # read-write, only while consumeSource is filebrowser
   nextexplorer/data: /mnt/nextexplorer # read-write, only while consumeSource is nextexplorer
 file_models:
-  - store.json # adminPassword, the generated Django secretKey, consumeSource, filebrowserSubfolder, nextexplorerLocation
+  - store.json # adminPassword, the generated Django secretKey, consumeSource, filebrowserSubfolder, nextexplorerLocation, filenameFormat
 startos_managed_env_vars:
   - PAPERLESS_REDIS
   - PAPERLESS_PORT
@@ -244,6 +265,7 @@ startos_managed_env_vars:
   - PAPERLESS_TIME_ZONE
   - PAPERLESS_OCR_LANGUAGE
   - PAPERLESS_CONSUMPTION_DIR # /usr/src/paperless/consume, /mnt/filebrowser/<subfolder> or /mnt/nextexplorer/<location>
+  - PAPERLESS_FILENAME_FORMAT # only while filenameFormat is non-empty
   - USERMAP_UID
   - USERMAP_GID
 dependencies:
@@ -254,6 +276,8 @@ interfaces:
 actions:
   - set-admin-password # temp container, writes to the DB directly, no restart
   - set-consume-folder # writes the store; the daemon re-mounts and restarts
+  - set-filename-format # only-stopped; renames stored documents via document_renamer, then writes the store
+  - check-integrity # only-stopped; read-only document_sanity_checker
 tasks:
   - { action: set-admin-password, severity: critical } # reactive
 health_checks:

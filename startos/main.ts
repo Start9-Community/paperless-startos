@@ -34,6 +34,7 @@ export function paperlessDaemons(
     secretKey,
     trustedOrigins,
     consumeFolder,
+    filenameFormat,
   }: {
     secretKey: string
     trustedOrigins: string
@@ -41,6 +42,7 @@ export function paperlessDaemons(
       | { source: 'filebrowser'; subfolder: string }
       | { source: 'nextexplorer'; location: string }
       | null
+    filenameFormat: string
   },
 ) {
   return sdk.Daemons.of(effects)
@@ -115,6 +117,9 @@ export function paperlessDaemons(
               : consumeFolder?.source === 'nextexplorer'
                 ? `${nextexplorerMountpoint}/${consumeFolder.location}`
                 : consumeMountpoint,
+          ...(filenameFormat
+            ? { PAPERLESS_FILENAME_FORMAT: filenameFormat }
+            : {}),
           USERMAP_UID: '1000',
           USERMAP_GID: '1000',
         },
@@ -157,5 +162,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
             : null,
       )
       .const(effects),
+    filenameFormat:
+      (await storeJson.read((s) => s.filenameFormat).const(effects)) ?? '',
   })
 })
