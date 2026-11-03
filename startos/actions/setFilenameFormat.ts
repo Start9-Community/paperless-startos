@@ -1,19 +1,68 @@
 import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
-import { dataMountpoint, paperlessMounts, redisPort, srcDir } from '../utils'
+import {
+  dataMountpoint,
+  hubMounts,
+  mediaEnv,
+  mediaFolderOf,
+  redisPort,
+  srcDir,
+} from '../utils'
 
-const { InputSpec, Value } = sdk
+const { InputSpec, Value, Variants } = sdk
+
+const presets = {
+  numbered: '',
+  yearCorrespondent: '{{ created_year }}/{{ correspondent }}/{{ title }}',
+  correspondent: '{{ correspondent }}/{{ title }}',
+  yearType: '{{ created_year }}/{{ document_type }}/{{ title }}',
+  typeYear: '{{ document_type }}/{{ created_year }}/{{ title }}',
+} as const
 
 export const inputSpec = InputSpec.of({
-  format: Value.text({
+  layout: Value.union({
     name: i18n('Filename Format'),
     description: i18n(
-      'A Paperless-ngx filename template, e.g. {{ created_year }}/{{ correspondent }}/{{ title }}. Leave empty for the default numbered names (0000042.pdf).',
+      'Pick a ready-made layout, or Custom to write your own Paperless-ngx filename template.',
     ),
-    default: null,
-    required: false,
-    placeholder: '{{ created_year }}/{{ correspondent }}/{{ title }}',
+    default: 'numbered',
+    variants: Variants.of({
+      numbered: {
+        name: i18n('Numbered (default)'),
+        spec: InputSpec.of({}),
+      },
+      yearCorrespondent: {
+        name: i18n('Year / Correspondent / Title'),
+        spec: InputSpec.of({}),
+      },
+      correspondent: {
+        name: i18n('Correspondent / Title'),
+        spec: InputSpec.of({}),
+      },
+      yearType: {
+        name: i18n('Year / Document type / Title'),
+        spec: InputSpec.of({}),
+      },
+      typeYear: {
+        name: i18n('Document type / Year / Title'),
+        spec: InputSpec.of({}),
+      },
+      custom: {
+        name: i18n('Custom'),
+        spec: InputSpec.of({
+          format: Value.text({
+            name: i18n('Filename Format'),
+            description: i18n(
+              'A Paperless-ngx filename template, e.g. {{ created_year }}/{{ correspondent }}/{{ title }}. Leave empty for the default numbered names (0000042.pdf).',
+            ),
+            default: null,
+            required: false,
+            placeholder: presets.yearCorrespondent,
+          }),
+        }),
+      },
+    }),
   }),
 })
 
@@ -35,13 +84,29 @@ export const setFilenameFormat = sdk.Action.withInput(
 
   inputSpec,
 
-  async () => ({
-    format: (await storeJson.read((s) => s.filenameFormat).once()) || null,
-  }),
+  async () => {
+    const saved = (await storeJson.read((s) => s.filenameFormat).once()) ?? ''
+    const preset = (Object.keys(presets) as (keyof typeof presets)[]).find(
+      (k) => presets[k] === saved,
+    )
+    return {
+      layout: preset
+        ? {
+            selection: preset,
+            value: {},
+            other: { custom: { format: null } },
+          }
+        : { selection: 'custom' as const, value: { format: saved } },
+    }
+  },
 
   async ({ effects, input }) => {
-    const filenameFormat = input.format?.trim() ?? ''
+    const filenameFormat =
+      input.layout.selection === 'custom'
+        ? (input.layout.value.format?.trim() ?? '')
+        : presets[input.layout.selection]
     const secretKey = (await storeJson.read((s) => s.secretKey).once()) ?? ''
+    const mediaFolder = await storeJson.read(mediaFolderOf).once()
 
     // document_renamer clears Django's Redis-backed document caches for every
     // document it moves, and the service is stopped, so bring up a throwaway
@@ -79,7 +144,7 @@ export const setFilenameFormat = sdk.Action.withInput(
           await sdk.SubContainer.withTemp(
             effects,
             { imageId: 'paperless' },
-            paperlessMounts,
+            hubMounts(mediaFolder),
             'set-filename-format',
             async (sub) => {
               const db = await sub.exec([
@@ -104,6 +169,7 @@ export const setFilenameFormat = sdk.Action.withInput(
                 env: {
                   PAPERLESS_SECRET_KEY: secretKey,
                   PAPERLESS_REDIS: `redis://127.0.0.1:${redisPort}`,
+                  ...mediaEnv(mediaFolder),
                   ...(filenameFormat
                     ? { PAPERLESS_FILENAME_FORMAT: filenameFormat }
                     : {}),

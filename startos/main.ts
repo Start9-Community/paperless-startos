@@ -1,15 +1,16 @@
 import { T, utils } from '@start9labs/start-sdk'
-import { manifest as filebrowserManifest } from 'filebrowser-startos/startos/manifest'
-import { manifest as nextexplorerManifest } from 'nextexplorer-startos/startos/manifest'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
 import { uiHostId, uiInterfaceId } from './interfaces'
 import { sdk } from './sdk'
 import {
+  consumeFolderOf,
   consumeMountpoint,
-  filebrowserMountpoint,
-  nextexplorerMountpoint,
-  paperlessMounts,
+  HubFolder,
+  hubMounts,
+  hubPath,
+  mediaEnv,
+  mediaFolderOf,
   redisPort,
   uiPort,
 } from './utils'
@@ -34,14 +35,17 @@ export function paperlessDaemons(
     secretKey,
     trustedOrigins,
     consumeFolder,
+    mediaFolder,
+    consumeRecursive,
+    consumeSubdirsAsTags,
     filenameFormat,
   }: {
     secretKey: string
     trustedOrigins: string
-    consumeFolder:
-      | { source: 'filebrowser'; subfolder: string }
-      | { source: 'nextexplorer'; location: string }
-      | null
+    consumeFolder: HubFolder
+    mediaFolder: HubFolder
+    consumeRecursive: boolean
+    consumeSubdirsAsTags: boolean
     filenameFormat: string
   },
 ) {
@@ -80,23 +84,7 @@ export function paperlessDaemons(
       subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'paperless' },
-        consumeFolder?.source === 'filebrowser'
-          ? paperlessMounts.mountDependency<typeof filebrowserManifest>({
-              dependencyId: 'filebrowser',
-              volumeId: 'data',
-              subpath: null,
-              mountpoint: filebrowserMountpoint,
-              readonly: false,
-            })
-          : consumeFolder?.source === 'nextexplorer'
-            ? paperlessMounts.mountDependency<typeof nextexplorerManifest>({
-                dependencyId: 'nextexplorer',
-                volumeId: 'data',
-                subpath: null,
-                mountpoint: nextexplorerMountpoint,
-                readonly: false,
-              })
-            : paperlessMounts,
+        hubMounts(consumeFolder, mediaFolder),
         'paperless-app',
       ),
       exec: {
@@ -111,12 +99,14 @@ export function paperlessDaemons(
           PAPERLESS_CSRF_TRUSTED_ORIGINS: trustedOrigins,
           PAPERLESS_TIME_ZONE: 'UTC',
           PAPERLESS_OCR_LANGUAGE: 'eng',
-          PAPERLESS_CONSUMPTION_DIR:
-            consumeFolder?.source === 'filebrowser'
-              ? `${filebrowserMountpoint}/${consumeFolder.subfolder}`
-              : consumeFolder?.source === 'nextexplorer'
-                ? `${nextexplorerMountpoint}/${consumeFolder.location}`
-                : consumeMountpoint,
+          PAPERLESS_CONSUMPTION_DIR: consumeFolder
+            ? hubPath(consumeFolder)
+            : consumeMountpoint,
+          ...mediaEnv(mediaFolder),
+          ...(consumeRecursive ? { PAPERLESS_CONSUMER_RECURSIVE: 'true' } : {}),
+          ...(consumeRecursive && consumeSubdirsAsTags
+            ? { PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: 'true' }
+            : {}),
           ...(filenameFormat
             ? { PAPERLESS_FILENAME_FORMAT: filenameFormat }
             : {}),
@@ -147,21 +137,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
     trustedOrigins: (
       await sdk.host.getOwn(effects, uiHostId, uiUrls).const()
     ).join(','),
-    consumeFolder: await storeJson
-      .read((s) =>
-        s.consumeSource === 'filebrowser'
-          ? {
-              source: 'filebrowser' as const,
-              subfolder: s.filebrowserSubfolder,
-            }
-          : s.consumeSource === 'nextexplorer'
-            ? {
-                source: 'nextexplorer' as const,
-                location: s.nextexplorerLocation,
-              }
-            : null,
-      )
-      .const(effects),
+    consumeFolder: await storeJson.read(consumeFolderOf).const(effects),
+    mediaFolder: await storeJson.read(mediaFolderOf).const(effects),
+    consumeRecursive:
+      (await storeJson.read((s) => s.consumeRecursive).const(effects)) ?? false,
+    consumeSubdirsAsTags:
+      (await storeJson.read((s) => s.consumeSubdirsAsTags).const(effects)) ??
+      false,
     filenameFormat:
       (await storeJson.read((s) => s.filenameFormat).const(effects)) ?? '',
   })

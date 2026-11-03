@@ -39,7 +39,7 @@ const dict = {
   'Choose where Paperless-ngx watches for new documents: a private folder, or a folder in FileBrowser Quantum or NextExplorer you can drop files into.': 24,
   NextExplorer: 25,
   'NextExplorer Location': 26,
-  'Location in NextExplorer that Paperless-ngx watches. Added to NextExplorer if it does not exist; NextExplorer must be installed.': 27,
+  'Path in NextExplorer that Paperless-ngx watches. Its first folder is the NextExplorer location, such as Files, and is added to NextExplorer if it does not exist; NextExplorer must be installed.': 27,
   'Install NextExplorer first': 28,
   'Consume Folder Set': 29,
   'Paperless-ngx now watches the ${location} location in NextExplorer. NextExplorer accounts other than the admin see it only once you add it in their Volumes tab.': 30,
@@ -59,6 +59,29 @@ const dict = {
   'No errors were found. Any warnings are listed below.': 42,
   'Problems were found. Details are listed below.': 43,
   Report: 44,
+
+  // actions/setDocumentStorage.ts
+  'Document Storage': 45,
+  'Where Paperless-ngx keeps its documents: originals, archive copies and thumbnails. The database always stays local.\n- Local (default): on the Paperless-ngx volume, included in its backup.\n- FileBrowser Quantum: a folder in FileBrowser Quantum, so you can browse the documents there. FileBrowser Quantum must be installed.\n- NextExplorer: a location in NextExplorer, so you can browse the documents there. NextExplorer must be installed.': 46,
+  'Local (default)': 47,
+  'Folder inside FileBrowser Quantum that holds the documents. Created automatically; FileBrowser Quantum must be installed. Use a folder no one else writes to.': 48,
+  'Path in NextExplorer that holds the documents. Its first folder is the NextExplorer location, such as Files, and is added to NextExplorer if it does not exist; NextExplorer must be installed. Use a folder no one else writes to.': 49,
+  'Set Document Storage': 50,
+  'Choose where Paperless-ngx keeps its documents: on its own volume, or in a folder in FileBrowser Quantum or NextExplorer where you can browse them.': 51,
+  'Documents kept outside Paperless-ngx are not in its backup. They are backed up with FileBrowser Quantum or NextExplorer, and a restore needs both from around the same time. Existing documents are not moved: move them yourself first, or Paperless-ngx will report them missing. Uninstalling or wiping that service deletes your documents, so review its dependents before you uninstall.': 52,
+  'Document Storage Set': 53,
+  'Document storage updated. Existing documents were not moved. Start Paperless-ngx, then run Check Document Integrity. Leave the thumbnails folder and media.lock in that folder alone.': 54,
+  'Pick a ready-made layout, or Custom to write your own Paperless-ngx filename template.': 55,
+  'Numbered (default)': 56,
+  'Year / Correspondent / Title': 57,
+  'Correspondent / Title': 58,
+  'Year / Document type / Title': 59,
+  'Document type / Year / Title': 60,
+  Custom: 61,
+  'Watch Subfolders': 62,
+  'Also import documents placed in subfolders of the consume folder. Off by default: Paperless-ngx otherwise ignores everything inside a subfolder.': 63,
+  'Subfolders as Tags': 64,
+  'Tag each imported document with the names of the subfolders it came from. Needs Watch Subfolders.': 65,
 } as const
 
 /**

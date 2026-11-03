@@ -28,6 +28,9 @@ export const bootstrapDatabase = sdk.setupOnInit(
         await sdk.host.getOwn(effects, uiHostId, uiUrls).once()
       ).join(','),
       consumeFolder: null,
+      mediaFolder: null,
+      consumeRecursive: false,
+      consumeSubdirsAsTags: false,
       filenameFormat: '',
     }).runUntilSuccess(300_000)
     phase.complete()

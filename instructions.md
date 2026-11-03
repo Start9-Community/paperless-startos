@@ -24,6 +24,18 @@ Changing the consume folder restarts Paperless-ngx.
 
 By default Paperless-ngx stores documents under numbered names such as `0000042.pdf`. To arrange them into folders and readable names instead, stop the service and run **Set Filename Format** with a template such as `{{ created_year }}/{{ correspondent }}/{{ title }}`, then start it again. Existing documents are renamed to match, which can take a while on a large library, so back up first. Documents without a correspondent are filed under a `none` folder and move out of it when one is assigned. Storage paths you set inside Paperless-ngx take precedence for the documents they apply to.
 
+## Keeping documents in FileBrowser Quantum or NextExplorer
+
+By default Paperless-ngx keeps its documents on its own volume, and its backup includes them. To browse them in FileBrowser Quantum or NextExplorer, stop the service and run **Set Document Storage**. Read the warning first:
+
+- The documents are then backed up with FileBrowser Quantum or NextExplorer, not with Paperless-ngx, and a restore needs both from around the same time.
+- Existing documents are not moved. Move them yourself first, or Paperless-ngx will report them missing. Run **Check Document Integrity** afterwards.
+- Uninstalling or wiping that service deletes your documents. Review its dependents before you uninstall.
+- Use a folder nobody else writes to: anyone who can reach it can rename or delete files out from under Paperless-ngx. Leave `thumbnails` and `media.lock` alone.
+- To see them in Nextcloud, attach that folder through Nextcloud's External Storage action. For a separate set per user, create storage paths in Paperless-ngx (for example `personal/...` and `business/...`) and assign documents to them; the hub folder shows both trees to everyone who can open it.
+
+For a restore point that is consistent with the database whatever state the hub is in, run Paperless-ngx's `document_exporter` into the `export` folder; it is part of Paperless-ngx's backup and `document_importer` restores from it.
+
 ## Checking your documents
 
 With the service stopped, run **Check Document Integrity** to see whether any document is missing its file or has a damaged one. It is worth running after restoring a backup.

@@ -1,7 +1,13 @@
 import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
-import { dataMountpoint, paperlessMounts, srcDir } from '../utils'
+import {
+  dataMountpoint,
+  hubMounts,
+  mediaEnv,
+  mediaFolderOf,
+  srcDir,
+} from '../utils'
 
 export const checkIntegrity = sdk.Action.withoutInput(
   'check-integrity',
@@ -19,13 +25,14 @@ export const checkIntegrity = sdk.Action.withoutInput(
 
   async ({ effects }) => {
     const secretKey = (await storeJson.read((s) => s.secretKey).once()) ?? ''
+    const mediaFolder = await storeJson.read(mediaFolderOf).once()
     let output = ''
     let exitCode: number | null = null
 
     await sdk.SubContainer.withTemp(
       effects,
       { imageId: 'paperless' },
-      paperlessMounts,
+      hubMounts(mediaFolder),
       'check-integrity',
       async (sub) => {
         const db = await sub.exec([
@@ -46,13 +53,23 @@ export const checkIntegrity = sdk.Action.withoutInput(
             cwd: srcDir,
             user: 'paperless',
             timeout: null,
-            env: { PAPERLESS_SECRET_KEY: secretKey },
+            env: { PAPERLESS_SECRET_KEY: secretKey, ...mediaEnv(mediaFolder) },
           },
         )
         exitCode = res.exitCode
         output = `${res.stdout.toString()}${res.stderr.toString()}`.trim()
       },
     )
+
+    // A single result renders on one line whatever its length, so give each line
+    // its own row. Past maxRows the remainder shares the last row.
+    const maxRows = 50
+    const lines = output.split('\n').filter((l) => l.trim())
+    const rows =
+      lines.length <= maxRows
+        ? lines
+        : [...lines.slice(0, maxRows - 1), lines.slice(maxRows - 1).join('\n')]
+    if (!rows.length) rows.push('-')
 
     return {
       version: '1',
@@ -62,14 +79,17 @@ export const checkIntegrity = sdk.Action.withoutInput(
           ? i18n('No errors were found. Any warnings are listed below.')
           : i18n('Problems were found. Details are listed below.'),
       result: {
-        type: 'single',
-        name: i18n('Report'),
-        description: null,
-        value: output || '-',
-        masked: false,
-        copyable: true,
-        qr: false,
-        launchable: false,
+        type: 'group',
+        value: rows.map((value, i) => ({
+          type: 'single' as const,
+          name: `${i18n('Report')} ${i + 1}`,
+          description: null,
+          value,
+          masked: false,
+          copyable: true,
+          qr: false,
+          launchable: false,
+        })),
       },
     }
   },
