@@ -22,7 +22,7 @@ Changing the consume folder restarts Paperless-ngx.
 
 ## Readable filenames
 
-By default Paperless-ngx stores documents under numbered names such as `0000042.pdf`. To arrange them into folders and readable names instead, stop the service and run **Set Filename Format** with a template such as `{{ created_year }}/{{ correspondent }}/{{ title }}`, then start it again. Existing documents are renamed to match, which can take a while on a large library, so back up first. Documents without a correspondent are filed under a `none` folder and move out of it when one is assigned. Storage paths you set inside Paperless-ngx take precedence for the documents they apply to.
+By default Paperless-ngx stores documents under numbered names such as `0000042.pdf`. To arrange them into folders and readable names instead, stop the service and run **Set Filename Format** with a template such as `{{ created_year }}/{{ correspondent }}/{{ title }}`, then start it again. The last part of a template is the file name, so end it with `{{ title }}`. For names that start with the date, such as `20260315 - Title.pdf`, pick one of the "Date - Title" layouts or use `{{ created_year }}{{ created_month }}{{ created_day }} - {{ title }}`. Existing documents are renamed to match, which can take a while on a large library, so back up first. Documents without a correspondent are filed under a `none` folder and move out of it when one is assigned. Storage paths you set inside Paperless-ngx take precedence for the documents they apply to.
 
 ## Keeping documents in FileBrowser Quantum or NextExplorer
 

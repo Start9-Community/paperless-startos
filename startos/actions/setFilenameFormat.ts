@@ -12,8 +12,15 @@ import {
 
 const { InputSpec, Value, Variants } = sdk
 
+const dated =
+  '{{ created_year }}{{ created_month }}{{ created_day }} - {{ title }}'
+
 const presets = {
   numbered: '',
+  dated,
+  yearCorrespondentDated: `{{ created_year }}/{{ correspondent }}/${dated}`,
+  correspondentDated: `{{ correspondent }}/${dated}`,
+  yearTypeDated: `{{ created_year }}/{{ document_type }}/${dated}`,
   yearCorrespondent: '{{ created_year }}/{{ correspondent }}/{{ title }}',
   correspondent: '{{ correspondent }}/{{ title }}',
   yearType: '{{ created_year }}/{{ document_type }}/{{ title }}',
@@ -30,6 +37,22 @@ export const inputSpec = InputSpec.of({
     variants: Variants.of({
       numbered: {
         name: i18n('Numbered (default)'),
+        spec: InputSpec.of({}),
+      },
+      dated: {
+        name: i18n('Date - Title'),
+        spec: InputSpec.of({}),
+      },
+      yearCorrespondentDated: {
+        name: i18n('Year / Correspondent / Date - Title'),
+        spec: InputSpec.of({}),
+      },
+      correspondentDated: {
+        name: i18n('Correspondent / Date - Title'),
+        spec: InputSpec.of({}),
+      },
+      yearTypeDated: {
+        name: i18n('Year / Document type / Date - Title'),
         spec: InputSpec.of({}),
       },
       yearCorrespondent: {
@@ -54,7 +77,7 @@ export const inputSpec = InputSpec.of({
           format: Value.text({
             name: i18n('Filename Format'),
             description: i18n(
-              'A Paperless-ngx filename template, e.g. {{ created_year }}/{{ correspondent }}/{{ title }}. Leave empty for the default numbered names (0000042.pdf).',
+              'A Paperless-ngx filename template, e.g. {{ created_year }}/{{ correspondent }}/{{ title }}. The last part is the file name, so end with {{ title }}: without it every file is named after its last field (e.g. 2026.pdf) and gets _01, _02 added. For a date like 20260315 - Title, use {{ created_year }}{{ created_month }}{{ created_day }} - {{ title }}. Leave empty for the default numbered names (0000042.pdf).',
             ),
             default: null,
             required: false,

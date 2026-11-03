@@ -47,7 +47,7 @@ const dict = {
 
   // actions/setFilenameFormat.ts, actions/checkIntegrity.ts
   'Filename Format': 32,
-  'A Paperless-ngx filename template, e.g. {{ created_year }}/{{ correspondent }}/{{ title }}. Leave empty for the default numbered names (0000042.pdf).': 33,
+  'A Paperless-ngx filename template, e.g. {{ created_year }}/{{ correspondent }}/{{ title }}. The last part is the file name, so end with {{ title }}: without it every file is named after its last field (e.g. 2026.pdf) and gets _01, _02 added. For a date like 20260315 - Title, use {{ created_year }}{{ created_month }}{{ created_day }} - {{ title }}. Leave empty for the default numbered names (0000042.pdf).': 33,
   'Set Filename Format': 34,
   'Choose how Paperless-ngx names and arranges stored documents. By default files are numbered (0000042.pdf); a format such as {{ created_year }}/{{ correspondent }}/{{ title }} gives a readable folder tree, which matters most when the documents are shared with another service. Storage paths set inside Paperless-ngx take precedence over this format.': 35,
   'Paperless-ngx renames every stored document to match the new format. This can take a while on a large library, so back up first.': 36,
@@ -82,6 +82,10 @@ const dict = {
   'Also import documents placed in subfolders of the consume folder. Off by default: Paperless-ngx otherwise ignores everything inside a subfolder.': 63,
   'Subfolders as Tags': 64,
   'Tag each imported document with the names of the subfolders it came from. Needs Watch Subfolders.': 65,
+  'Date - Title': 66,
+  'Year / Correspondent / Date - Title': 67,
+  'Correspondent / Date - Title': 68,
+  'Year / Document type / Date - Title': 69,
 } as const
 
 /**
