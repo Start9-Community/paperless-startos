@@ -29,9 +29,10 @@ By default Paperless-ngx stores documents under numbered names such as `0000042.
 By default Paperless-ngx keeps its documents on its own volume, and its backup includes them. To browse them in FileBrowser Quantum or NextExplorer, stop the service and run **Set Document Storage**. Read the warning first:
 
 - The documents are then backed up with FileBrowser Quantum or NextExplorer, not with Paperless-ngx, and a restore needs both from around the same time.
-- Existing documents are not moved. Move them yourself first, or Paperless-ngx will report them missing. Run **Check Document Integrity** afterwards.
+- Existing documents are not moved. With Paperless-ngx stopped, move the entire contents of the old media root into the new folder, preserving the `documents/` directory and its `originals/`, `archive/`, `thumbnails/` and other contents. Keep `media.lock` at the root. The same applies when switching back to Local. Run **Check Document Integrity** before starting Paperless-ngx.
+- The consume folder and document folder must be separate and not nested on the same service. The actions reject overlapping folders.
 - Uninstalling or wiping that service deletes your documents. Review its dependents before you uninstall.
-- Use a folder nobody else writes to: anyone who can reach it can rename or delete files out from under Paperless-ngx. Leave `thumbnails` and `media.lock` alone.
+- Use a folder nobody else writes to: anyone who can reach it can rename or delete files out from under Paperless-ngx. Leave `documents/thumbnails` and `media.lock` alone.
 - To see them in Nextcloud, attach that folder through Nextcloud's External Storage action. For a separate set per user, create storage paths in Paperless-ngx (for example `personal/...` and `business/...`) and assign documents to them; the hub folder shows both trees to everyone who can open it.
 
 For a restore point that is consistent with the database whatever state the hub is in, run Paperless-ngx's `document_exporter` into the `export` folder; it is part of Paperless-ngx's backup and `document_importer` restores from it.

@@ -54,7 +54,7 @@ Two images: the application, and a Redis sidecar. The root `Dockerfile` upgrades
 
 ## Volume and Data Layout
 
-One volume, mounted four times at four different subpaths, plus an optional fifth mount from FileBrowser Quantum or NextExplorer.
+One volume, mounted four times at four different subpaths, plus up to two mounts from FileBrowser Quantum or NextExplorer for the consume folder and document storage.
 
 | Volume                  | Subpath       | Mount Point                    | Purpose                                                  |
 | ----------------------- | ------------- | ------------------------------ | -------------------------------------------------------- |
@@ -62,25 +62,25 @@ One volume, mounted four times at four different subpaths, plus an optional fift
 | `main`                  | `media`       | `…/media`                      | The stored documents                                     |
 | `main`                  | `consume`     | `…/consume`                    | The private intake folder                                |
 | `main`                  | `export`      | `…/export`                     | Where exports are written                                |
-| `filebrowser` → `data`  | `<subfolder>` | `/mnt/filebrowser/<subfolder>` | The consume subfolder in FileBrowser Quantum, read-write |
-| `nextexplorer` → `data` | `<location>`  | `/mnt/nextexplorer/<location>` | The consume location in NextExplorer, read-write         |
+| `filebrowser` → `data`  | `<subfolder>` | `/mnt/filebrowser/<subfolder>` | A consume or document subfolder in FileBrowser Quantum, read-write |
+| `nextexplorer` → `data` | `<location>`  | `/mnt/nextexplorer/<location>` | A consume or document path in NextExplorer, read-write         |
 
 **All four `main` mounts are required, not just the ones being used.** Django's startup checks verify every one of those paths exists and is writable, and refuse to run otherwise — which is why the same mount set is used by the password action's temporary container as by the daemon itself.
 
 **The FileBrowser Quantum mount exists only while the consume folder or the document store points there** (see Set Consume Folder). Only each chosen subfolder is mounted, at `/mnt/filebrowser/<subfolder>`; `PAPERLESS_CONSUMPTION_DIR` and `PAPERLESS_MEDIA_ROOT` point at them; the rest of FileBrowser Quantum's files are not visible to Paperless. The private `consume` subpath stays mounted for Django's checks but is not watched. The mount is read-write because consumption **deletes** the source file after a successful import — inside the same database transaction, so a read-only mount would roll back every import. Paperless runs as uid 1000, the uid FileBrowser Quantum serves its volume as, so no id mapping is needed.
 
-**The NextExplorer mount works the same way while the consume folder points there**: only the chosen location is mounted, at `/mnt/nextexplorer/<location>`, and `PAPERLESS_CONSUMPTION_DIR` is that path. NextExplorer also serves its volume as uid 1000.
+**The NextExplorer mounts work the same way while the consume folder or document store points there**: only the chosen paths are mounted, at `/mnt/nextexplorer/<path>`, and `PAPERLESS_CONSUMPTION_DIR` and `PAPERLESS_MEDIA_ROOT` point at them. NextExplorer also serves its volume as uid 1000.
 
 | Path         | Written by  | Holds                                                                                 |
 | ------------ | ----------- | ------------------------------------------------------------------------------------- |
 | `db.sqlite3` | Paperless   | Documents' metadata, tags, users                                                      |
-| `store.json` | The package | The admin password, the secret key, the consume folder choice and the filename format |
+| `store.json` | The package | The admin password, the secret key, consume settings, document storage and filename format |
 
-**Documents are files, and their metadata is a database.** Both are on this volume, and neither is much use without the other.
+**Documents are files, and their metadata is a database.** Both are on this volume by default; external document storage moves only the media files to the hub. Neither is much use without the other.
 
 ## File Models
 
-One model, holding two generated values and two user choices.
+One model, holding generated credentials and package settings.
 
 | File         | Format | Modelled                | Written by           |
 | ------------ | ------ | ----------------------- | -------------------- |
@@ -89,6 +89,8 @@ One model, holding two generated values and two user choices.
 - **The Django secret key**, generated once at install. It signs sessions and is not rotatable — changing it invalidates every session and anything else derived from it.
 - **The admin password**, recorded so the package knows whether one has been set.
 - **The consume folder** — `consumeSource` (`local`, `filebrowser` or `nextexplorer`), `filebrowserSubfolder` and `nextexplorerLocation`. Read reactively by the daemon and by the dependency declaration, so changing them restarts the service with the right mounts and re-evaluates the dependency.
+- **The consume options** — `consumeRecursive` and `consumeSubdirsAsTags`, both off by default.
+- **Document storage** — `storageSource`, `storageFilebrowserSubfolder` and `storageNextexplorerLocation`, defaulting to local storage. Read reactively by the daemon and dependency declarations.
 - **The filename format** — `filenameFormat`, empty by default. When set, it is passed to Paperless as `PAPERLESS_FILENAME_FORMAT`; when empty the variable is not set and documents keep numbered names.
 
 Everything else Paperless needs is **passed as environment**, and two of those values are computed rather than fixed: the allowed CORS origins and the CSRF trusted origins are built from the interface's **current addresses**. StartOS terminates TLS in front of the application, so without those the browser's origin would not match what Django expects and **logins would be rejected as CSRF failures** — which presents as a wrong password rather than a proxy problem.
@@ -97,16 +99,16 @@ Paperless's own settings — document types, tags, mail rules, workflows — liv
 
 ## Dependencies
 
-Two, both optional, and each enabled only while the consume folder points at it.
+Two, both optional, and each enabled while the consume folder or document store points at it.
 
 | Dependency          | Id             | Version range               | Required | Kind     | Purpose                              |
 | ------------------- | -------------- | --------------------------- | -------- | -------- | ------------------------------------ |
-| FileBrowser Quantum | `filebrowser`  | `>=#quantum:2.0.2-stable:3` | No       | `exists` | Hosts the consume folder, read-write |
-| NextExplorer        | `nextexplorer` | `>=3.1.0:2 && <4.0.0:0`     | No       | `exists` | Hosts the consume folder, read-write |
+| FileBrowser Quantum | `filebrowser`  | `>=#quantum:2.0.2-stable:3` | No       | `exists` | Hosts consume or document storage, read-write |
+| NextExplorer        | `nextexplorer` | `>=3.1.0:2 && <4.0.0:0`     | No       | `exists` | Hosts consume or document storage, read-write |
 
 The `filebrowser` range names the `#quantum` flavor, so the unflavored File Browser package does not satisfy it.
 
-While the consume folder points at one of them, `startos/dependencies.ts` enables it as an optional `exists` dependency — it only has to be installed, not running, for the volume to be there — and StartOS shows the usual dependency warning if it is missing. With the private folder selected, both dependencies are disabled.
+While the consume folder or document store points at one of them, `startos/dependencies.ts` enables it as an optional `exists` dependency — it only has to be installed, not running, for the volume to be there — and StartOS shows the usual dependency warning if it is missing. Both dependencies are disabled only when both folders are local.
 
 Redis runs as a private sidecar of this service rather than as a StartOS dependency.
 
@@ -138,7 +140,7 @@ After that, the `critical` task asks for the admin password. Once set, the servi
 
 ## Actions
 
-Four actions.
+Five actions.
 
 ### Set Admin Password
 
@@ -169,10 +171,11 @@ Chooses where Paperless keeps its whole media root (originals, archive copies, t
 
 - **What it changes:** `storageSource`, and `storageFilebrowserSubfolder` or `storageNextexplorerLocation`, in the store. The daemon mounts just the chosen folder of the hub (separately from the consume folder, even on the same hub) and sets `PAPERLESS_MEDIA_ROOT`. Check Document Integrity and Set Filename Format use the same mount and variable, so they inspect the documents wherever they live.
 - **Runnable only while stopped.**
-- **Existing documents are not moved.** Switching an existing library leaves Paperless pointed at an empty tree: every document is then missing its file until the files are moved by hand (service stopped, move `originals/`, `archive/` and `thumbnails/` into the new folder, then run Check Document Integrity). The same applies in reverse when switching back to Local.
+- **Existing documents are not moved.** With the service stopped, move the entire contents of the old media root into the new root, preserving relative paths. The tree is `documents/originals/`, `documents/archive/`, `documents/thumbnails/` and any other media contents, with `media.lock` at the root. Do not flatten the `documents/` directory. Run Check Document Integrity before starting Paperless. The same applies in reverse when switching back to Local.
+- **Consume and document folders must be separate and not nested on the same hub.** Both actions reject overlaps after normalizing paths, and mount construction applies the same guard. This also catches the legacy consume folder `paperless` overlapping the default storage folder `paperless/documents`.
 - **Backups split.** The `main` volume backup no longer contains the documents; they are in the hub's backup, and a restore needs both from around the same time. Check Document Integrity reports the gaps; the export folder (`document_exporter`) is the one snapshot that is consistent with the database.
 - **Uninstalling or wiping the hub deletes the documents** while Paperless keeps their records. The package adds no guard beyond StartOS's dependency warning: review dependents before uninstalling.
-- **The folder is writable by anyone with access to it in the hub.** Use one no one else writes to, and leave `thumbnails/` and `media.lock` alone.
+- **The folder is writable by anyone with access to it in the hub.** Use one no one else writes to, and leave `documents/thumbnails/` and `media.lock` alone.
 - **NextExplorer:** handled as in Set Consume Folder (the action declares the dependency and runs `add-location`). Nextcloud is not offered as a target; it reads FileBrowser Quantum and NextExplorer live through its own External Storage action.
 
 ### Set Filename Format
@@ -182,7 +185,7 @@ Sets the template Paperless uses to name and arrange stored documents. The form 
 - **What it changes:** `filenameFormat` in the store, and the name and folder of every stored document, through Paperless's own `document_renamer`.
 - **Runnable only while stopped.** The rename runs in a temporary container beside a throwaway Redis on the shared loopback, because the renamer clears Django's Redis-backed document caches for each document it moves and the service's Redis is not running. It has no timeout, since a large library outlasts the 30 s default.
 - **Cost:** time proportional to the library, then a restart for the daemon to pick up the variable. The renamer never overwrites or deletes a file.
-- **The store is written only after the rename succeeds**, so a failed run leaves the previous format recorded. A run that fails partway may already have moved some documents, whose database records moved with them; run the action again to finish, and Check Document Integrity to verify.
+- **The store is written only after the rename succeeds**, including checking the upstream handler's warnings: Paperless logs per-document move failures without failing `document_renamer` itself. A failed run leaves the previous format recorded. A run that fails partway may already have moved some documents, whose database records moved with them; run the action again to finish, and Check Document Integrity to verify.
 - **Storage paths set inside Paperless take precedence** over this format for the documents they are assigned to. Documents without a correspondent land in a `none` folder and move out when one is assigned.
 - **Back up first** — the action warns before running.
 
@@ -190,7 +193,7 @@ Sets the template Paperless uses to name and arrange stored documents. The form 
 
 Runs Paperless's sanity check (`check_sanity()`, the same one `document_sanity_checker` uses) through `manage.py shell` and shows the findings in one scrollable, copyable multiline field, one line per finding, worst first: `LEVEL: #id title: message`. The command's own output is a Rich table with a progress bar, which the action result would split into dozens of unreadable single-line reports.
 
-- **Reports:** missing or corrupted original and archive files, missing or unreadable thumbnails, documents without content (warning), and files in the media folder that no document refers to (warning).
+- **Reports:** missing or corrupted original and archive files, missing or unreadable thumbnails, documents without content (info), and files in the media folder that no document refers to (warning).
 - **Cost:** none beyond the run. It reads only, in a temporary container, with no timeout.
 - **Runnable only while stopped**, so no file is read mid-write.
 - **When to run it:** after restoring a backup, and after Set Filename Format.
@@ -226,13 +229,13 @@ The application waits for the broker, so a failing broker shows as the applicati
 
 The `main` volume is copied wholesale — `sdk.Backups.ofVolumes('main')`. That is all four subpaths: the database, the stored documents, whatever is sitting in the intake folder, and the exports.
 
-**This is the whole library.** Documents and their metadata are both here, and neither is recoverable from anywhere else — there is no upstream service holding a copy.
+**With local document storage, this is the whole library.** With external storage, back up the hub too: the metadata stays here but the live documents do not.
 
 **It includes the secret key and the admin password**, so a restored instance signs in with the same credentials. The trusted-origin lists are recomputed on the new server, so the interface works at the new address after the first start.
 
 Note that the intake and export folders are backed up along with everything else, so a backup taken mid-import is larger than the library alone.
 
-**A consume folder or a document store in FileBrowser Quantum or NextExplorer is that package's data**, backed up by it, not this one. The store records the choice, so a restore on a server without that package starts but imports nothing until it is installed and Paperless restarted.
+**A consume folder or a document store in FileBrowser Quantum or NextExplorer is that package's data**, backed up by it, not this one. The store records the choice, so a restore on a server without that package cannot mount the selected folders or start Paperless until the dependency is restored.
 
 ## Limitations and Differences
 
@@ -269,7 +272,7 @@ dependency_mounts:
   filebrowser/data/<subfolder>: /mnt/filebrowser/<subfolder> # read-write, per folder, only while consumeSource or storageSource is filebrowser
   nextexplorer/data/<location>: /mnt/nextexplorer/<location> # read-write, per folder, only while consumeSource or storageSource is nextexplorer
 file_models:
-  - store.json # adminPassword, the generated Django secretKey, consumeSource, filebrowserSubfolder, nextexplorerLocation, filenameFormat
+  - store.json # credentials, consume source/path/options, storage source/path, filenameFormat
 startos_managed_env_vars:
   - PAPERLESS_REDIS
   - PAPERLESS_PORT
@@ -280,17 +283,21 @@ startos_managed_env_vars:
   - PAPERLESS_TIME_ZONE
   - PAPERLESS_OCR_LANGUAGE
   - PAPERLESS_CONSUMPTION_DIR # /usr/src/paperless/consume, /mnt/filebrowser/<subfolder> or /mnt/nextexplorer/<location>
+  - PAPERLESS_MEDIA_ROOT # only while document storage is external
+  - PAPERLESS_CONSUMER_RECURSIVE # only while consumeRecursive is true
+  - PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS # only while both consume options are true
   - PAPERLESS_FILENAME_FORMAT # only while filenameFormat is non-empty
   - USERMAP_UID
   - USERMAP_GID
 dependencies:
-  - { id: filebrowser, optional: true, kind: exists } # '>=#quantum:2.0.2-stable:3'; enabled only while it is the consume source
-  - { id: nextexplorer, optional: true, kind: exists } # same; set-consume-folder runs its add-location
+  - { id: filebrowser, optional: true, kind: exists } # '>=#quantum:2.0.2-stable:3'; enabled while it hosts consume or document storage
+  - { id: nextexplorer, optional: true, kind: exists } # enabled while it hosts consume or document storage; both folder actions run add-location
 interfaces:
   ui: { type: ui, port: 8000 } # Paperless's own login; no gate added by StartOS
 actions:
   - set-admin-password # temp container, writes to the DB directly, no restart
   - set-consume-folder # writes the store; the daemon re-mounts and restarts
+  - set-document-storage # only-stopped; selects the media root without moving files
   - set-filename-format # only-stopped; renames stored documents via document_renamer, then writes the store
   - check-integrity # only-stopped; read-only document_sanity_checker
 tasks:

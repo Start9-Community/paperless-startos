@@ -2,7 +2,9 @@ import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 import {
+  assertSeparateHubFolders,
   cleanFolder,
+  consumeFolderOf,
   locationOf,
   defaultStorageLocation,
   defaultStorageSubfolder,
@@ -102,17 +104,22 @@ export const setDocumentStorage = sdk.Action.withInput(
   },
 
   async ({ effects, input }) => {
+    const store = await storeJson.read().once()
+    const consumeFolder = store ? consumeFolderOf(store) : null
     if (input.source.selection === 'nextexplorer') {
       const location = cleanFolder(input.source.value.location)
+      assertSeparateHubFolders(consumeFolder, { source: 'nextexplorer', location })
       await ensureNextexplorerLocation(effects, locationOf(location))
       await storeJson.merge(effects, {
         storageSource: 'nextexplorer',
         storageNextexplorerLocation: location,
       })
     } else if (input.source.selection === 'filebrowser') {
+      const subfolder = cleanFolder(input.source.value.subfolder)
+      assertSeparateHubFolders(consumeFolder, { source: 'filebrowser', subfolder })
       await storeJson.merge(effects, {
         storageSource: 'filebrowser',
-        storageFilebrowserSubfolder: cleanFolder(input.source.value.subfolder),
+        storageFilebrowserSubfolder: subfolder,
       })
     } else {
       await storeJson.merge(effects, { storageSource: 'local' })
@@ -122,7 +129,7 @@ export const setDocumentStorage = sdk.Action.withInput(
       version: '1',
       title: i18n('Document Storage Set'),
       message: i18n(
-        'Document storage updated. Existing documents were not moved. Start Paperless-ngx, then run Check Document Integrity. Leave the thumbnails folder and media.lock in that folder alone.',
+        'Document storage updated. Existing documents were not moved. Run Check Document Integrity before starting Paperless-ngx. Leave documents/thumbnails and media.lock in that folder alone.',
       ),
       result: null,
     }

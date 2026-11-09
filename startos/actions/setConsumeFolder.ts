@@ -4,8 +4,10 @@ import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 import {
+  assertSeparateHubFolders,
   cleanFolder,
   locationOf,
+  mediaFolderOf,
   newConsumeLocation,
   newConsumeSubfolder,
 } from '../utils'
@@ -156,13 +158,25 @@ export const setConsumeFolder = sdk.Action.withInput(
       consumeRecursive: input.recursive,
       consumeSubdirsAsTags: input.recursive && input.subdirsAsTags,
     }
+    const store = await storeJson.read().once()
+    const mediaFolder = store ? mediaFolderOf(store) : null
     if (input.source.selection !== 'nextexplorer') {
+      const subfolder =
+        input.source.selection === 'filebrowser'
+          ? cleanFolder(input.source.value.subfolder)
+          : ''
+      assertSeparateHubFolders(
+        input.source.selection === 'filebrowser'
+          ? { source: 'filebrowser', subfolder }
+          : null,
+        mediaFolder,
+      )
       await storeJson.merge(
         effects,
         input.source.selection === 'filebrowser'
           ? {
               consumeSource: 'filebrowser',
-              filebrowserSubfolder: cleanFolder(input.source.value.subfolder),
+              filebrowserSubfolder: subfolder,
               ...subfolderOptions,
             }
           : { consumeSource: 'local', ...subfolderOptions },
@@ -171,6 +185,7 @@ export const setConsumeFolder = sdk.Action.withInput(
     }
 
     const location = cleanFolder(input.source.value.location)
+    assertSeparateHubFolders({ source: 'nextexplorer', location }, mediaFolder)
     await ensureNextexplorerLocation(effects, locationOf(location))
     await storeJson.merge(effects, {
       consumeSource: 'nextexplorer',

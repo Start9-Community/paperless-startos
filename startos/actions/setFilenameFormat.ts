@@ -12,6 +12,30 @@ import {
 
 const { InputSpec, Value, Variants } = sdk
 
+// Upstream logs per-document move failures without failing document_renamer.
+const renameScript = `
+import logging
+from django.core.management import call_command, CommandError
+
+class RenameFailures(logging.Handler):
+    def __init__(self):
+        super().__init__(logging.WARNING)
+        self.messages = []
+
+    def emit(self, record):
+        self.messages.append(record.getMessage())
+
+failures = RenameFailures()
+logger = logging.getLogger('paperless.handlers')
+logger.addHandler(failures)
+try:
+    call_command('document_renamer')
+finally:
+    logger.removeHandler(failures)
+if failures.messages:
+    raise CommandError('\\n'.join(failures.messages))
+`
+
 const dated =
   '{{ created_year }}{{ created_month }}{{ created_day }} - {{ title }}'
 
@@ -185,19 +209,22 @@ export const setFilenameFormat = sdk.Action.withInput(
               // document_renamer reads the format from the environment, so it
               // must see the new value before main.ts restarts with it. A large
               // library outlasts exec's 30 s default.
-              await sub.execFail(['python3', 'manage.py', 'document_renamer'], {
-                cwd: srcDir,
-                user: 'paperless',
-                timeout: null,
-                env: {
-                  PAPERLESS_SECRET_KEY: secretKey,
-                  PAPERLESS_REDIS: `redis://127.0.0.1:${redisPort}`,
-                  ...mediaEnv(mediaFolder),
-                  ...(filenameFormat
-                    ? { PAPERLESS_FILENAME_FORMAT: filenameFormat }
-                    : {}),
+              await sub.execFail(
+                ['python3', 'manage.py', 'shell', '-v', '0', '-c', renameScript],
+                {
+                  cwd: srcDir,
+                  user: 'paperless',
+                  timeout: null,
+                  env: {
+                    PAPERLESS_SECRET_KEY: secretKey,
+                    PAPERLESS_REDIS: `redis://127.0.0.1:${redisPort}`,
+                    ...mediaEnv(mediaFolder),
+                    ...(filenameFormat
+                      ? { PAPERLESS_FILENAME_FORMAT: filenameFormat }
+                      : {}),
+                  },
                 },
-              })
+              )
             },
           )
         } finally {
