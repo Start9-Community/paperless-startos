@@ -37,11 +37,11 @@
 
 Two images: the application, and a Redis sidecar. The root `Dockerfile` upgrades the application image's CA store and certifi, a temporary layer that comes out once upstream ships an image built on fixed stores.
 
-| Property      | Value                                             |
-| ------------- | ------------------------------------------------- |
+| Property      | Value                                                                  |
+| ------------- | ---------------------------------------------------------------------- |
 | Images        | `ghcr.io/paperless-ngx/paperless-ngx` + root `Dockerfile`, and `redis` |
-| Architectures | x86_64, aarch64                                   |
-| Command       | Each image's own entrypoint                       |
+| Architectures | x86_64, aarch64                                                        |
+| Command       | Each image's own entrypoint                                            |
 
 | Subcontainer      | Purpose                                  |
 | ----------------- | ---------------------------------------- |
@@ -56,20 +56,20 @@ Two images: the application, and a Redis sidecar. The root `Dockerfile` upgrades
 
 One volume, mounted four times at four different subpaths, plus an optional fifth mount from FileBrowser Quantum or NextExplorer.
 
-| Volume                  | Subpath   | Mount Point         | Purpose                                 |
-| ----------------------- | --------- | ------------------- | --------------------------------------- |
-| `main`                  | `data`    | `…/data`            | The database and the search index       |
-| `main`                  | `media`   | `…/media`           | The stored documents                    |
-| `main`                  | `consume` | `…/consume`         | The private intake folder               |
-| `main`                  | `export`  | `…/export`          | Where exports are written               |
-| `filebrowser` → `data`  | —         | `/mnt/filebrowser`  | FileBrowser Quantum's files, read-write |
-| `nextexplorer` → `data` | —         | `/mnt/nextexplorer` | NextExplorer's locations, read-write    |
+| Volume                  | Subpath       | Mount Point                    | Purpose                                                  |
+| ----------------------- | ------------- | ------------------------------ | -------------------------------------------------------- |
+| `main`                  | `data`        | `…/data`                       | The database and the search index                        |
+| `main`                  | `media`       | `…/media`                      | The stored documents                                     |
+| `main`                  | `consume`     | `…/consume`                    | The private intake folder                                |
+| `main`                  | `export`      | `…/export`                     | Where exports are written                                |
+| `filebrowser` → `data`  | `<subfolder>` | `/mnt/filebrowser/<subfolder>` | The consume subfolder in FileBrowser Quantum, read-write |
+| `nextexplorer` → `data` | `<location>`  | `/mnt/nextexplorer/<location>` | The consume location in NextExplorer, read-write         |
 
 **All four `main` mounts are required, not just the ones being used.** Django's startup checks verify every one of those paths exists and is writable, and refuse to run otherwise — which is why the same mount set is used by the password action's temporary container as by the daemon itself.
 
-**The FileBrowser Quantum mount exists only while the consume folder points there** (see Set Consume Folder). `PAPERLESS_CONSUMPTION_DIR` is then the chosen subfolder under `/mnt/filebrowser`, and the private `consume` subpath stays mounted for Django's checks but is not watched. The mount is read-write because consumption **deletes** the source file after a successful import — inside the same database transaction, so a read-only mount would roll back every import. Paperless runs as uid 1000, the uid FileBrowser Quantum serves its volume as, so no id mapping is needed.
+**The FileBrowser Quantum mount exists only while the consume folder points there** (see Set Consume Folder). Only the chosen subfolder is mounted, at `/mnt/filebrowser/<subfolder>`, and `PAPERLESS_CONSUMPTION_DIR` points at it; the rest of FileBrowser Quantum's files are not visible to Paperless. The private `consume` subpath stays mounted for Django's checks but is not watched. The mount is read-write because consumption **deletes** the source file after a successful import — inside the same database transaction, so a read-only mount would roll back every import. Paperless runs as uid 1000, the uid FileBrowser Quantum serves its volume as, so no id mapping is needed.
 
-**The NextExplorer mount works the same way while the consume folder points there**: `PAPERLESS_CONSUMPTION_DIR` is the chosen location, `/mnt/nextexplorer/<location>`. NextExplorer also serves its volume as uid 1000.
+**The NextExplorer mount works the same way while the consume folder points there**: only the chosen location is mounted, at `/mnt/nextexplorer/<location>`, and `PAPERLESS_CONSUMPTION_DIR` is that path. NextExplorer also serves its volume as uid 1000.
 
 | Path         | Written by  | Holds                                                             |
 | ------------ | ----------- | ----------------------------------------------------------------- |
@@ -98,10 +98,12 @@ Paperless's own settings — document types, tags, mail rules, workflows — liv
 
 Two, both optional, and each enabled only while the consume folder points at it.
 
-| Dependency          | Id             | Required | Kind     | Purpose                              |
-| ------------------- | -------------- | -------- | -------- | ------------------------------------ |
-| FileBrowser Quantum | `filebrowser`  | No       | `exists` | Hosts the consume folder, read-write |
-| NextExplorer        | `nextexplorer` | No       | `exists` | Hosts the consume folder, read-write |
+| Dependency          | Id             | Version range               | Required | Kind     | Purpose                              |
+| ------------------- | -------------- | --------------------------- | -------- | -------- | ------------------------------------ |
+| FileBrowser Quantum | `filebrowser`  | `>=#quantum:2.0.2-stable:3` | No       | `exists` | Hosts the consume folder, read-write |
+| NextExplorer        | `nextexplorer` | `>=3.1.0:2 && <4.0.0:0`     | No       | `exists` | Hosts the consume folder, read-write |
+
+The `filebrowser` range names the `#quantum` flavor, so the unflavored File Browser package does not satisfy it.
 
 While the consume folder points at one of them, `startos/dependencies.ts` enables it as an optional `exists` dependency — it only has to be installed, not running, for the volume to be there — and StartOS shows the usual dependency warning if it is missing. With the private folder selected, both dependencies are disabled.
 
@@ -154,8 +156,8 @@ Generates a password for the `admin` account and shows it once.
 Chooses where Paperless watches for new documents: the private `consume` subpath (the default — reachable only by Paperless itself, so in practice "web upload only"), a subfolder of FileBrowser Quantum's data volume (default `paperless`), or a NextExplorer location (default `Paperless`).
 
 - **What it changes:** `consumeSource`, and `filebrowserSubfolder` or `nextexplorerLocation`, in the store.
-- **Cost:** a restart. The daemon reads both values reactively, mounts FileBrowser Quantum's volume when selected, and points `PAPERLESS_CONSUMPTION_DIR` at the subfolder; Paperless's own entrypoint creates the subfolder if it is missing.
-- **Runnable at any status.** Selecting FileBrowser Quantum before it is installed still starts the service: StartOS mounts an empty placeholder where the volume would be, so Paperless watches a folder nothing can reach, and the dependency warning is the only sign. Install FileBrowser Quantum, then restart Paperless.
+- **Cost:** a restart. The daemon reads both values reactively, mounts just the chosen subfolder of FileBrowser Quantum's volume when selected, and points `PAPERLESS_CONSUMPTION_DIR` at it; StartOS creates the subfolder if it is missing when it mounts it. The subfolder must name a folder inside the volume: the action refuses `..` and paths made only of `/` and `.`.
+- **Runnable at any status.** Selecting FileBrowser Quantum before it is installed is accepted, but Paperless then fails to start, since the volume it mounts is missing; the dependency warning says why. Install FileBrowser Quantum, then start Paperless.
 - **NextExplorer:** refused unless NextExplorer is installed. The action declares the dependency, then runs NextExplorer's `add-location` itself (`access: 'dependent'`), which creates the location or accepts one that already exists, and writes the store only once that succeeds. A name NextExplorer rejects leaves the previous choice in place.
 - **Repeat safety:** switching away keeps the last subfolder and location, so each is pre-filled if selected again. Files left in any folder are not moved.
 
@@ -230,8 +232,8 @@ volumes:
     consume: /usr/src/paperless/consume # the private intake folder; idle while another consume source is selected
     export: /usr/src/paperless/export
 dependency_mounts:
-  filebrowser/data: /mnt/filebrowser # read-write, only while consumeSource is filebrowser
-  nextexplorer/data: /mnt/nextexplorer # read-write, only while consumeSource is nextexplorer
+  filebrowser/data/<subfolder>: /mnt/filebrowser/<subfolder> # read-write, only while consumeSource is filebrowser
+  nextexplorer/data/<location>: /mnt/nextexplorer/<location> # read-write, only while consumeSource is nextexplorer
 file_models:
   - store.json # adminPassword, the generated Django secretKey, consumeSource, filebrowserSubfolder, nextexplorerLocation
 startos_managed_env_vars:
@@ -247,7 +249,7 @@ startos_managed_env_vars:
   - USERMAP_UID
   - USERMAP_GID
 dependencies:
-  - { id: filebrowser, optional: true, kind: exists } # enabled only while it is the consume source
+  - { id: filebrowser, optional: true, kind: exists } # '>=#quantum:2.0.2-stable:3'; enabled only while it is the consume source
   - { id: nextexplorer, optional: true, kind: exists } # same; set-consume-folder runs its add-location
 interfaces:
   ui: { type: ui, port: 8000 } # Paperless's own login; no gate added by StartOS

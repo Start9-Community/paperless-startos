@@ -44,6 +44,7 @@ const dict = {
   'Consume Folder Set': 29,
   'Paperless-ngx now watches the ${location} location in NextExplorer. NextExplorer accounts other than the admin see it only once you add it in their Volumes tab.': 30,
   'Gives the admin account a new password. Its current password stops working, and the new one is shown only once.': 31,
+  'Must name a folder inside FileBrowser Quantum, without ".."': 32,
 } as const
 
 /**

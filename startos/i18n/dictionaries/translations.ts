@@ -34,6 +34,7 @@ export default {
     29: 'Carpeta de consumo establecida',
     30: 'Paperless-ngx ahora vigila la ubicación ${location} de NextExplorer. Las cuentas de NextExplorer distintas de la de administrador solo la ven cuando la añades en su pestaña Volumes.',
     31: 'Da una nueva contraseña a la cuenta admin. Su contraseña actual deja de funcionar y la nueva solo se muestra una vez.',
+    32: 'Debe indicar una carpeta dentro de FileBrowser Quantum, sin ".."',
   },
   de_DE: {
     0: 'Aufgaben-Broker',
@@ -68,6 +69,7 @@ export default {
     29: 'Konsum-Ordner festgelegt',
     30: 'Paperless-ngx überwacht jetzt den Standort ${location} in NextExplorer. Andere NextExplorer-Konten als das des Admins sehen ihn erst, wenn du ihn in ihrem Volumes-Tab hinzufügst.',
     31: 'Gibt dem Admin-Konto ein neues Passwort. Sein aktuelles Passwort funktioniert nicht mehr, und das neue wird nur einmal angezeigt.',
+    32: 'Muss einen Ordner innerhalb von FileBrowser Quantum angeben, ohne ".."',
   },
   pl_PL: {
     0: 'Broker zadań',
@@ -102,6 +104,7 @@ export default {
     29: 'Folder konsumpcji ustawiony',
     30: 'Paperless-ngx obserwuje teraz lokalizację ${location} w NextExplorer. Konta NextExplorer inne niż administratora widzą ją dopiero po dodaniu jej w ich zakładce Volumes.',
     31: 'Nadaje kontu admin nowe hasło. Obecne hasło przestaje działać, a nowe jest wyświetlane tylko raz.',
+    32: 'Musi wskazywać folder wewnątrz FileBrowser Quantum, bez ".."',
   },
   fr_FR: {
     0: 'File de tâches',
@@ -136,5 +139,6 @@ export default {
     29: 'Dossier de consommation défini',
     30: "Paperless-ngx surveille désormais l'emplacement ${location} de NextExplorer. Les comptes NextExplorer autres que celui de l'administrateur ne le voient qu'une fois ajouté dans leur onglet Volumes.",
     31: "Donne un nouveau mot de passe au compte admin. Son mot de passe actuel cesse de fonctionner, et le nouveau n'est affiché qu'une seule fois.",
+    32: 'Doit désigner un dossier dans FileBrowser Quantum, sans « .. »',
   },
 } satisfies Record<string, LangDict>
