@@ -70,7 +70,7 @@ const dict = {
   'Choose where Paperless-ngx keeps its documents: on its own volume, or in a folder in FileBrowser Quantum or NextExplorer where you can browse them.': 51,
   'Documents kept outside Paperless-ngx are not in its backup. They are backed up with FileBrowser Quantum or NextExplorer, and a restore needs both from around the same time. Existing documents are not moved: move them yourself first, or Paperless-ngx will report them missing. Uninstalling or wiping that service deletes your documents, so review its dependents before you uninstall.': 52,
   'Document Storage Set': 53,
-  'Document storage updated. Existing documents were not moved. Start Paperless-ngx, then run Check Document Integrity. Leave the thumbnails folder and media.lock in that folder alone.': 54,
+  'Document storage updated. Existing documents were not moved. Run Check Document Integrity before starting Paperless-ngx. Leave documents/thumbnails and media.lock in that folder alone.': 54,
   'Pick a ready-made layout, or Custom to write your own Paperless-ngx filename template.': 55,
   'Numbered (default)': 56,
   'Year / Correspondent / Title': 57,
@@ -87,6 +87,8 @@ const dict = {
   'Correspondent / Date - Title': 68,
   'Year / Document type / Date - Title': 69,
   'Must name a folder inside FileBrowser Quantum, without ".."': 70,
+  'Folder paths must name a subfolder and cannot contain "..".': 71,
+  'Consume and document folders must be separate and not nested on the same service.': 72,
 } as const
 
 /**

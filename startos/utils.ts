@@ -3,6 +3,7 @@
 
 import { manifest as filebrowserManifest } from 'filebrowser-quantum-startos/startos/manifest'
 import { manifest as nextexplorerManifest } from 'nextexplorer-startos/startos/manifest'
+import { i18n } from './i18n'
 import { sdk } from './sdk'
 
 export const uiPort = 8000
@@ -103,6 +104,11 @@ export const hubPath = (folder: NonNullable<HubFolder>) =>
 // use, each mounted at its own path so the rest of the hub's files stay hidden.
 // Folders are expected to be distinct; one hub may serve both.
 export const hubMounts = (...folders: HubFolder[]) => {
+  for (const [index, folder] of folders.entries()) {
+    for (const other of folders.slice(index + 1)) {
+      assertSeparateHubFolders(folder, other)
+    }
+  }
   let mounts = paperlessMounts
   for (const folder of folders) {
     if (folder?.source === 'filebrowser') {
@@ -133,11 +139,33 @@ export const mediaEnv = (media: HubFolder): Record<string, string> =>
 
 // A folder path typed into an action: no leading slash, no parent references.
 export const cleanFolder = (raw: string) => {
-  const folder = raw.trim().replace(/^\/+|\/+$/g, '')
-  if (folder.split('/').includes('..')) {
-    throw new Error('Folder paths cannot contain ..')
+  const parts = raw
+    .trim()
+    .split('/')
+    .filter((part) => part && part !== '.')
+  if (!parts.length || parts.includes('..')) {
+    throw new Error(
+      i18n('Folder paths must name a subfolder and cannot contain "..".'),
+    )
   }
-  return folder
+  return parts.join('/')
+}
+
+// Consume and media roots on one hub must be disjoint, including after path normalization.
+export const assertSeparateHubFolders = (
+  first: HubFolder,
+  second: HubFolder,
+) => {
+  if (!first || !second || first.source !== second.source) return
+  const a = cleanFolder(hubPath(first))
+  const b = cleanFolder(hubPath(second))
+  if (a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)) {
+    throw new Error(
+      i18n(
+        'Consume and document folders must be separate and not nested on the same service.',
+      ),
+    )
+  }
 }
 
 // The NextExplorer location a path lives in: its first folder.
