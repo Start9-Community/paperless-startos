@@ -1,5 +1,5 @@
 import { T, utils } from '@start9labs/start-sdk'
-import { manifest as filebrowserManifest } from 'filebrowser-startos/startos/manifest'
+import { manifest as filebrowserManifest } from 'filebrowser-quantum-startos/startos/manifest'
 import { manifest as nextexplorerManifest } from 'nextexplorer-startos/startos/manifest'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
@@ -82,16 +82,16 @@ export function paperlessDaemons(
           ? paperlessMounts.mountDependency<typeof filebrowserManifest>({
               dependencyId: 'filebrowser',
               volumeId: 'data',
-              subpath: null,
-              mountpoint: filebrowserMountpoint,
+              subpath: consumeFolder.subfolder,
+              mountpoint: `${filebrowserMountpoint}/${consumeFolder.subfolder}`,
               readonly: false,
             })
           : consumeFolder?.source === 'nextexplorer'
             ? paperlessMounts.mountDependency<typeof nextexplorerManifest>({
                 dependencyId: 'nextexplorer',
                 volumeId: 'data',
-                subpath: null,
-                mountpoint: nextexplorerMountpoint,
+                subpath: consumeFolder.location,
+                mountpoint: `${nextexplorerMountpoint}/${consumeFolder.location}`,
                 readonly: false,
               })
             : paperlessMounts,
