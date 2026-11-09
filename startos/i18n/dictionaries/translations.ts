@@ -72,6 +72,7 @@ export default {
     67: 'Año / Corresponsal / Fecha - Título',
     68: 'Corresponsal / Fecha - Título',
     69: 'Año / Tipo de documento / Fecha - Título',
+    70: 'Debe indicar una carpeta dentro de FileBrowser Quantum, sin ".."',
   },
   de_DE: {
     0: 'Aufgaben-Broker',
@@ -144,6 +145,7 @@ export default {
     67: 'Jahr / Korrespondent / Datum - Titel',
     68: 'Korrespondent / Datum - Titel',
     69: 'Jahr / Dokumenttyp / Datum - Titel',
+    70: 'Muss einen Ordner innerhalb von FileBrowser Quantum angeben, ohne ".."',
   },
   pl_PL: {
     0: 'Broker zadań',
@@ -216,6 +218,7 @@ export default {
     67: 'Rok / Korespondent / Data - Tytuł',
     68: 'Korespondent / Data - Tytuł',
     69: 'Rok / Typ dokumentu / Data - Tytuł',
+    70: 'Musi wskazywać folder wewnątrz FileBrowser Quantum, bez ".."',
   },
   fr_FR: {
     0: 'File de tâches',
@@ -288,5 +291,6 @@ export default {
     67: 'Année / Correspondant / Date - Titre',
     68: 'Correspondant / Date - Titre',
     69: 'Année / Type de document / Date - Titre',
+    70: 'Doit désigner un dossier dans FileBrowser Quantum, sans « .. »',
   },
 } satisfies Record<string, LangDict>

@@ -34,6 +34,14 @@ export const inputSpec = InputSpec.of({
             default: defaultStorageSubfolder,
             required: true,
             placeholder: defaultStorageSubfolder,
+            patterns: [
+              {
+                regex: '^(?!(.*/)?\\.\\.(/|$))(?=.*[^./\\s]).*$',
+                description: i18n(
+                  'Must name a folder inside FileBrowser Quantum, without ".."',
+                ),
+              },
+            ],
           }),
         }),
       },

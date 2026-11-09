@@ -86,6 +86,7 @@ const dict = {
   'Year / Correspondent / Date - Title': 67,
   'Correspondent / Date - Title': 68,
   'Year / Document type / Date - Title': 69,
+  'Must name a folder inside FileBrowser Quantum, without ".."': 70,
 } as const
 
 /**

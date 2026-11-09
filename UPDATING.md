@@ -17,5 +17,4 @@ This package wraps the official [Paperless-ngx](https://github.com/paperless-ngx
 ## Applying the bump
 
 - Bump the `IMAGE` build arg in `startos/manifest/index.ts` to `ghcr.io/paperless-ngx/paperless-ngx:<new version>` (drop the leading `v` from the release tag).
-- Update `version` and `releaseNotes` in `startos/versions/current.ts` to match (`<new version>:0`, resetting the revision; only bump the `:N` revision for package-only changes).
 - Review the [upstream changelog](https://docs.paperless-ngx.com/changelog/) for new or renamed environment variables that affect `startos/main.ts`.

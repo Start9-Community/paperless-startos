@@ -1,7 +1,7 @@
 // Here we define any constants or functions that are shared by multiple components
 // throughout the package codebase. This file will be unnecessary for many packages.
 
-import { manifest as filebrowserManifest } from 'filebrowser-startos/startos/manifest'
+import { manifest as filebrowserManifest } from 'filebrowser-quantum-startos/startos/manifest'
 import { manifest as nextexplorerManifest } from 'nextexplorer-startos/startos/manifest'
 import { sdk } from './sdk'
 
@@ -99,27 +99,29 @@ export const hubPath = (folder: NonNullable<HubFolder>) =>
     ? `${filebrowserMountpoint}/${folder.subfolder}`
     : `${nextexplorerMountpoint}/${folder.location}`
 
-// paperlessMounts plus each hub the consume folder or the media root uses. A hub
-// used by both is mounted once.
+// paperlessMounts plus only the folders the consume folder and the media root
+// use, each mounted at its own path so the rest of the hub's files stay hidden.
+// Folders are expected to be distinct; one hub may serve both.
 export const hubMounts = (...folders: HubFolder[]) => {
   let mounts = paperlessMounts
-  if (folders.some((f) => f?.source === 'filebrowser')) {
-    mounts = mounts.mountDependency<typeof filebrowserManifest>({
-      dependencyId: 'filebrowser',
-      volumeId: 'data',
-      subpath: null,
-      mountpoint: filebrowserMountpoint,
-      readonly: false,
-    })
-  }
-  if (folders.some((f) => f?.source === 'nextexplorer')) {
-    mounts = mounts.mountDependency<typeof nextexplorerManifest>({
-      dependencyId: 'nextexplorer',
-      volumeId: 'data',
-      subpath: null,
-      mountpoint: nextexplorerMountpoint,
-      readonly: false,
-    })
+  for (const folder of folders) {
+    if (folder?.source === 'filebrowser') {
+      mounts = mounts.mountDependency<typeof filebrowserManifest>({
+        dependencyId: 'filebrowser',
+        volumeId: 'data',
+        subpath: folder.subfolder,
+        mountpoint: hubPath(folder),
+        readonly: false,
+      })
+    } else if (folder?.source === 'nextexplorer') {
+      mounts = mounts.mountDependency<typeof nextexplorerManifest>({
+        dependencyId: 'nextexplorer',
+        volumeId: 'data',
+        subpath: folder.location,
+        mountpoint: hubPath(folder),
+        readonly: false,
+      })
+    }
   }
   return mounts
 }
