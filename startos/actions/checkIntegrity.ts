@@ -9,6 +9,30 @@ import {
   srcDir,
 } from '../utils'
 
+// document_sanity_checker renders a Rich table and progress bar meant for a
+// terminal, which splits into dozens of unreadable rows here. This runs the same
+// check_sanity() and prints one plain line per finding, worst first.
+const sanityScript = `
+import logging, sys
+from documents.models import Document
+from documents.sanity_checker import check_sanity
+
+m = check_sanity()
+pks = [p for p in m.document_pks() if p is not None]
+titles = dict(Document.global_objects.filter(pk__in=pks).values_list('pk', 'title'))
+names = {logging.ERROR: 'ERROR', logging.WARNING: 'WARNING'}
+rank = {'ERROR': 0, 'WARNING': 1, 'INFO': 2}
+rows = []
+for pk, msgs in m.iter_messages():
+    doc = '#%s %s' % (pk, titles.get(pk, 'Unknown')) if pk is not None else '(global)'
+    for x in msgs:
+        level = names.get(x['level'], 'INFO')
+        rows.append((rank[level], '%s: %s: %s' % (level, doc, x['message'])))
+rows.sort(key=lambda r: r[0])
+print('\\n'.join(r[1] for r in rows) or 'No issues found.')
+sys.exit(1 if m.has_error else 0)
+`
+
 export const checkIntegrity = sdk.Action.withoutInput(
   'check-integrity',
 
@@ -48,7 +72,7 @@ export const checkIntegrity = sdk.Action.withoutInput(
           )
         }
         const res = await sub.exec(
-          ['python3', 'manage.py', 'document_sanity_checker'],
+          ['python3', 'manage.py', 'shell', '-v', '0', '-c', sanityScript],
           {
             cwd: srcDir,
             user: 'paperless',
@@ -61,16 +85,6 @@ export const checkIntegrity = sdk.Action.withoutInput(
       },
     )
 
-    // A single result renders on one line whatever its length, so give each line
-    // its own row. Past maxRows the remainder shares the last row.
-    const maxRows = 50
-    const lines = output.split('\n').filter((l) => l.trim())
-    const rows =
-      lines.length <= maxRows
-        ? lines
-        : [...lines.slice(0, maxRows - 1), lines.slice(maxRows - 1).join('\n')]
-    if (!rows.length) rows.push('-')
-
     return {
       version: '1',
       title: i18n('Integrity Check'),
@@ -79,17 +93,14 @@ export const checkIntegrity = sdk.Action.withoutInput(
           ? i18n('No errors were found. Any warnings are listed below.')
           : i18n('Problems were found. Details are listed below.'),
       result: {
-        type: 'group',
-        value: rows.map((value, i) => ({
-          type: 'single' as const,
-          name: `${i18n('Report')} ${i + 1}`,
-          description: null,
-          value,
-          masked: false,
-          copyable: true,
-          qr: false,
-          launchable: false,
-        })),
+        type: 'multiline',
+        name: i18n('Report'),
+        description: null,
+        value: output || '-',
+        copyable: true,
+        qr: false,
+        masked: false,
+        filename: null,
       },
     }
   },

@@ -188,7 +188,7 @@ Sets the template Paperless uses to name and arrange stored documents. The form 
 
 ### Check Document Integrity
 
-Runs Paperless's `document_sanity_checker` and shows its report.
+Runs Paperless's sanity check (`check_sanity()`, the same one `document_sanity_checker` uses) through `manage.py shell` and shows the findings in one scrollable, copyable multiline field, one line per finding, worst first: `LEVEL: #id title: message`. The command's own output is a Rich table with a progress bar, which the action result would split into dozens of unreadable single-line reports.
 
 - **Reports:** missing or corrupted original and archive files, missing or unreadable thumbnails, documents without content (warning), and files in the media folder that no document refers to (warning).
 - **Cost:** none beyond the run. It reads only, in a temporary container, with no timeout.
