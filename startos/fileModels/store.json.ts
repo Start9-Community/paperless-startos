@@ -18,11 +18,8 @@ const shape = z.looseObject({
   filebrowserSubfolder: z.string().catch(defaultConsumeSubfolder),
   nextexplorerLocation: z.string().catch(defaultConsumeLocation),
   filenameFormat: z.string().catch(''),
-  // Off by default: Paperless-ngx watches only the top of the consume folder.
   consumeRecursive: z.boolean().catch(false),
   consumeSubdirsAsTags: z.boolean().catch(false),
-  // Where the whole media root (originals, archive, thumbnails) lives. 'local'
-  // keeps it on this package's own volume.
   storageSource: z
     .enum(['local', 'filebrowser', 'nextexplorer'])
     .catch('local'),

@@ -9,9 +9,7 @@ import {
   srcDir,
 } from '../utils'
 
-// document_sanity_checker renders a Rich table and progress bar meant for a
-// terminal, which splits into dozens of unreadable rows here. This runs the same
-// check_sanity() and prints one plain line per finding, worst first.
+// document_sanity_checker's Rich table splits into unreadable rows in an action result.
 const sanityScript = `
 import logging, sys
 from documents.models import Document

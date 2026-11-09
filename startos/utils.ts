@@ -15,13 +15,12 @@ export const filebrowserMountpoint = '/mnt/filebrowser'
 export const defaultConsumeSubfolder = 'paperless'
 export const nextexplorerMountpoint = '/mnt/nextexplorer'
 export const defaultConsumeLocation = 'Paperless'
-// Fresh selections nest the two folders under one parent. The stored fallbacks
-// above are unchanged, so a saved consume folder keeps pointing where it did. A
-// NextExplorer path starts with its location; Files is NextExplorer's own.
+// Defaults for a fresh selection; the stored fallbacks above stay for saved choices.
 export const newConsumeSubfolder = 'paperless/consume'
 export const newConsumeLocation = 'Files/paperless/consume'
 export const defaultStorageSubfolder = 'paperless/documents'
 export const defaultStorageLocation = 'Files/paperless/documents'
+export const mediaMountpoint = '/usr/src/paperless/media'
 export const srcDir = '/usr/src/paperless/src'
 
 // Both the main daemon and the set-admin-password action mount the same set of
@@ -37,7 +36,7 @@ export const paperlessMounts = sdk.Mounts.of()
   .mountVolume({
     volumeId: 'main',
     subpath: 'media',
-    mountpoint: '/usr/src/paperless/media',
+    mountpoint: mediaMountpoint,
     readonly: false,
   })
   .mountVolume({
@@ -53,8 +52,7 @@ export const paperlessMounts = sdk.Mounts.of()
     readonly: false,
   })
 
-// A folder inside a hub service (FileBrowser Quantum or NextExplorer), or null
-// for Paperless-ngx's own volume.
+// null is Paperless-ngx's own volume.
 export type HubFolder =
   | { source: 'filebrowser'; subfolder: string }
   | { source: 'nextexplorer'; location: string }
@@ -100,9 +98,6 @@ export const hubPath = (folder: NonNullable<HubFolder>) =>
     ? `${filebrowserMountpoint}/${folder.subfolder}`
     : `${nextexplorerMountpoint}/${folder.location}`
 
-// paperlessMounts plus only the folders the consume folder and the media root
-// use, each mounted at its own path so the rest of the hub's files stay hidden.
-// Folders are expected to be distinct; one hub may serve both.
 export const hubMounts = (...folders: HubFolder[]) => {
   for (const [index, folder] of folders.entries()) {
     for (const other of folders.slice(index + 1)) {
@@ -132,8 +127,9 @@ export const hubMounts = (...folders: HubFolder[]) => {
   return mounts
 }
 
-// Environment that points Paperless-ngx at an external media root. Empty for the
-// default local one.
+export const mediaRoot = (media: HubFolder) =>
+  media ? hubPath(media) : mediaMountpoint
+
 export const mediaEnv = (media: HubFolder): Record<string, string> =>
   media ? { PAPERLESS_MEDIA_ROOT: hubPath(media) } : {}
 
@@ -151,15 +147,18 @@ export const cleanFolder = (raw: string) => {
   return parts.join('/')
 }
 
-// Consume and media roots on one hub must be disjoint, including after path normalization.
+export const foldersOverlap = (first: HubFolder, second: HubFolder) => {
+  if (!first || !second || first.source !== second.source) return false
+  const a = cleanFolder(hubPath(first))
+  const b = cleanFolder(hubPath(second))
+  return a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)
+}
+
 export const assertSeparateHubFolders = (
   first: HubFolder,
   second: HubFolder,
 ) => {
-  if (!first || !second || first.source !== second.source) return
-  const a = cleanFolder(hubPath(first))
-  const b = cleanFolder(hubPath(second))
-  if (a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)) {
+  if (foldersOverlap(first, second)) {
     throw new Error(
       i18n(
         'Consume and document folders must be separate and not nested on the same service.',

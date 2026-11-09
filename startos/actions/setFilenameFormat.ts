@@ -155,9 +155,7 @@ export const setFilenameFormat = sdk.Action.withInput(
     const secretKey = (await storeJson.read((s) => s.secretKey).once()) ?? ''
     const mediaFolder = await storeJson.read(mediaFolderOf).once()
 
-    // document_renamer clears Django's Redis-backed document caches for every
-    // document it moves, and the service is stopped, so bring up a throwaway
-    // Redis on the shared loopback for the duration of the rename.
+    // document_renamer needs Redis, which is down while the service is stopped.
     await sdk.SubContainer.withTemp(
       effects,
       { imageId: 'redis' },

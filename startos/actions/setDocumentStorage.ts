@@ -1,13 +1,19 @@
 import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
+import { T } from '@start9labs/start-sdk'
 import {
   assertSeparateHubFolders,
   cleanFolder,
   consumeFolderOf,
-  locationOf,
   defaultStorageLocation,
   defaultStorageSubfolder,
+  foldersOverlap,
+  HubFolder,
+  hubMounts,
+  locationOf,
+  mediaFolderOf,
+  mediaRoot,
 } from '../utils'
 import { ensureNextexplorerLocation } from './setConsumeFolder'
 
@@ -74,7 +80,7 @@ export const setDocumentStorage = sdk.Action.withInput(
       'Choose where Paperless-ngx keeps its documents: on its own volume, or in a folder in FileBrowser Quantum or NextExplorer where you can browse them.',
     ),
     warning: i18n(
-      'Documents kept outside Paperless-ngx are not in its backup. They are backed up with FileBrowser Quantum or NextExplorer, and a restore needs both from around the same time. Existing documents are not moved: move them yourself first, or Paperless-ngx will report them missing. Uninstalling or wiping that service deletes your documents, so review its dependents before you uninstall.',
+      'Existing documents are moved to the new folder. This needs room for a second copy while it runs and can take a while on a large library. Documents kept outside Paperless-ngx are not in its backup: they are backed up with FileBrowser Quantum or NextExplorer, and a restore needs both from around the same time. Uninstalling or wiping that service deletes your documents, so review its dependents before you uninstall.',
     ),
     allowedStatuses: 'only-stopped',
     group: null,
@@ -106,38 +112,101 @@ export const setDocumentStorage = sdk.Action.withInput(
   async ({ effects, input }) => {
     const store = await storeJson.read().once()
     const consumeFolder = store ? consumeFolderOf(store) : null
-    if (input.source.selection === 'nextexplorer') {
-      const location = cleanFolder(input.source.value.location)
-      assertSeparateHubFolders(consumeFolder, {
-        source: 'nextexplorer',
-        location,
-      })
-      await ensureNextexplorerLocation(effects, locationOf(location))
-      await storeJson.merge(effects, {
-        storageSource: 'nextexplorer',
-        storageNextexplorerLocation: location,
-      })
-    } else if (input.source.selection === 'filebrowser') {
-      const subfolder = cleanFolder(input.source.value.subfolder)
-      assertSeparateHubFolders(consumeFolder, {
-        source: 'filebrowser',
-        subfolder,
-      })
-      await storeJson.merge(effects, {
-        storageSource: 'filebrowser',
-        storageFilebrowserSubfolder: subfolder,
-      })
-    } else {
-      await storeJson.merge(effects, { storageSource: 'local' })
+    const from = store ? mediaFolderOf(store) : null
+    const to: HubFolder =
+      input.source.selection === 'nextexplorer'
+        ? {
+            source: 'nextexplorer',
+            location: cleanFolder(input.source.value.location),
+          }
+        : input.source.selection === 'filebrowser'
+          ? {
+              source: 'filebrowser',
+              subfolder: cleanFolder(input.source.value.subfolder),
+            }
+          : null
+    assertSeparateHubFolders(consumeFolder, to)
+    const unchanged = mediaRoot(from) === mediaRoot(to)
+    if (!unchanged && foldersOverlap(from, to)) {
+      throw new Error(
+        i18n(
+          'The new document folder cannot be inside the current one, or contain it.',
+        ),
+      )
     }
+    if (to?.source === 'nextexplorer') {
+      await ensureNextexplorerLocation(effects, locationOf(to.location))
+    }
+
+    const writeStore = () =>
+      storeJson.merge(effects, {
+        storageSource: to?.source ?? 'local',
+        ...(to?.source === 'filebrowser'
+          ? { storageFilebrowserSubfolder: to.subfolder }
+          : {}),
+        ...(to?.source === 'nextexplorer'
+          ? { storageNextexplorerLocation: to.location }
+          : {}),
+      })
+
+    const moved = unchanged
+      ? false
+      : await moveMediaRoot(effects, from, to, writeStore)
+    if (!moved) await writeStore()
 
     return {
       version: '1',
       title: i18n('Document Storage Set'),
-      message: i18n(
-        'Document storage updated. Existing documents were not moved. Run Check Document Integrity before starting Paperless-ngx. Leave documents/thumbnails and media.lock in that folder alone.',
-      ),
+      message: moved
+        ? i18n('Document storage updated and existing documents moved.')
+        : i18n('Document storage updated.'),
       result: null,
     }
   },
 )
+
+const copyScript = `
+src=$1 dst=$2
+has_files() { [ -n "$(find "$1" -type f ! -path "$1/media.lock" -print -quit)" ]; }
+has_files "$src" || { echo empty; exit 0; }
+has_files "$dst" && { echo occupied; exit 0; }
+cp -a "$src"/. "$dst"/ || { find "$dst" -mindepth 1 -delete; exit 1; }
+echo copied
+`
+
+// Copies the media root, records the new location, then empties the old root,
+// so a failure at any step leaves the store pointing at a complete copy.
+async function moveMediaRoot(
+  effects: T.Effects,
+  from: HubFolder,
+  to: HubFolder,
+  writeStore: () => Promise<unknown>,
+) {
+  return sdk.SubContainer.withTemp(
+    effects,
+    { imageId: 'paperless' },
+    hubMounts(from, to),
+    'set-document-storage',
+    async (sub) => {
+      const res = await sub.execFail(
+        ['sh', '-c', copyScript, 'sh', mediaRoot(from), mediaRoot(to)],
+        { timeout: null },
+      )
+      const outcome = res.stdout.toString().trim()
+      if (outcome === 'occupied') {
+        throw new Error(
+          i18n(
+            'The new document folder already holds documents, and so does the current one. Choose an empty folder.',
+          ),
+        )
+      }
+      if (outcome !== 'copied') return false
+      await writeStore()
+      await sub.execFail(
+        ['find', mediaRoot(from), '-mindepth', '1', '-delete'],
+        { timeout: null },
+      )
+      return true
+    },
+  )
+}

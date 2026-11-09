@@ -68,9 +68,9 @@ const dict = {
   'Path in NextExplorer that holds the documents. Its first folder is the NextExplorer location, such as Files, and is added to NextExplorer if it does not exist; NextExplorer must be installed. Use a folder no one else writes to.': 49,
   'Set Document Storage': 50,
   'Choose where Paperless-ngx keeps its documents: on its own volume, or in a folder in FileBrowser Quantum or NextExplorer where you can browse them.': 51,
-  'Documents kept outside Paperless-ngx are not in its backup. They are backed up with FileBrowser Quantum or NextExplorer, and a restore needs both from around the same time. Existing documents are not moved: move them yourself first, or Paperless-ngx will report them missing. Uninstalling or wiping that service deletes your documents, so review its dependents before you uninstall.': 52,
+  'Existing documents are moved to the new folder. This needs room for a second copy while it runs and can take a while on a large library. Documents kept outside Paperless-ngx are not in its backup: they are backed up with FileBrowser Quantum or NextExplorer, and a restore needs both from around the same time. Uninstalling or wiping that service deletes your documents, so review its dependents before you uninstall.': 52,
   'Document Storage Set': 53,
-  'Document storage updated. Existing documents were not moved. Run Check Document Integrity before starting Paperless-ngx. Leave documents/thumbnails and media.lock in that folder alone.': 54,
+  'Document storage updated.': 54,
   'Pick a ready-made layout, or Custom to write your own Paperless-ngx filename template.': 55,
   'Numbered (default)': 56,
   'Year / Correspondent / Title': 57,
@@ -89,6 +89,9 @@ const dict = {
   'Must name a folder inside FileBrowser Quantum, without ".."': 70,
   'Folder paths must name a subfolder and cannot contain "..".': 71,
   'Consume and document folders must be separate and not nested on the same service.': 72,
+  'Document storage updated and existing documents moved.': 73,
+  'The new document folder cannot be inside the current one, or contain it.': 74,
+  'The new document folder already holds documents, and so does the current one. Choose an empty folder.': 75,
 } as const
 
 /**

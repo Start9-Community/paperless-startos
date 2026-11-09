@@ -128,23 +128,24 @@ export function paperlessDaemons(
 }
 
 export const main = sdk.setupMain(async ({ effects }) => {
-  const secretKey = await storeJson.read((s) => s.secretKey).const(effects)
-  if (!secretKey) {
+  // Leaves out adminPassword, so resetting it does not restart the service.
+  const options = await storeJson
+    .read((s) => ({
+      secretKey: s.secretKey,
+      consumeFolder: consumeFolderOf(s),
+      mediaFolder: mediaFolderOf(s),
+      consumeRecursive: s.consumeRecursive,
+      consumeSubdirsAsTags: s.consumeSubdirsAsTags,
+      filenameFormat: s.filenameFormat,
+    }))
+    .const(effects)
+  if (!options?.secretKey) {
     throw new Error('store.json is missing the generated secret key')
   }
   return paperlessDaemons(effects, {
-    secretKey,
+    ...options,
     trustedOrigins: (
       await sdk.host.getOwn(effects, uiHostId, uiUrls).const()
     ).join(','),
-    consumeFolder: await storeJson.read(consumeFolderOf).const(effects),
-    mediaFolder: await storeJson.read(mediaFolderOf).const(effects),
-    consumeRecursive:
-      (await storeJson.read((s) => s.consumeRecursive).const(effects)) ?? false,
-    consumeSubdirsAsTags:
-      (await storeJson.read((s) => s.consumeSubdirsAsTags).const(effects)) ??
-      false,
-    filenameFormat:
-      (await storeJson.read((s) => s.filenameFormat).const(effects)) ?? '',
   })
 })

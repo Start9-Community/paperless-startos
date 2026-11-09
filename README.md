@@ -167,23 +167,23 @@ Chooses where Paperless watches for new documents: the private `consume` subpath
 
 ### Set Document Storage
 
-Chooses where Paperless keeps its whole media root (originals, archive copies, thumbnails and `media.lock`): its own `media` subpath (the default), a subfolder of FileBrowser Quantum's data volume (default `paperless/documents`), mounted on its own like the consume folder, or a NextExplorer path (default `Files/paperless/documents`). The first folder of a NextExplorer path is its location, so the default sits inside NextExplorer's own `Files` location, like the other packages' folders; the action runs `add-location` for it, which accepts one that already exists. The database, the search index and the secret key always stay on the `main` volume.
+Chooses where Paperless keeps its whole media root (originals, archive copies, thumbnails and `media.lock`): its own `media` subpath (the default), a subfolder of FileBrowser Quantum's data volume (default `paperless/documents`), or a NextExplorer path (default `Files/paperless/documents`, whose first folder is the location; the action runs `add-location` for it). The database, the search index and the secret key always stay on the `main` volume.
 
-- **What it changes:** `storageSource`, and `storageFilebrowserSubfolder` or `storageNextexplorerLocation`, in the store. The daemon mounts just the chosen folder of the hub (separately from the consume folder, even on the same hub) and sets `PAPERLESS_MEDIA_ROOT`. Check Document Integrity and Set Filename Format use the same mount and variable, so they inspect the documents wherever they live.
+- **What it changes:** `storageSource`, and `storageFilebrowserSubfolder` or `storageNextexplorerLocation`, in the store. The daemon mounts just that folder and sets `PAPERLESS_MEDIA_ROOT`; Check Document Integrity and Set Filename Format do the same.
 - **Runnable only while stopped.**
-- **Existing documents are not moved.** With the service stopped, move the entire contents of the old media root into the new root, preserving relative paths. The tree is `documents/originals/`, `documents/archive/`, `documents/thumbnails/` and any other media contents, with `media.lock` at the root. Do not flatten the `documents/` directory. Run Check Document Integrity before starting Paperless. The same applies in reverse when switching back to Local.
-- **Consume and document folders must be separate and not nested on the same hub.** Both actions reject overlaps after normalizing paths, and mount construction applies the same guard. This also catches the legacy consume folder `paperless` overlapping the default storage folder `paperless/documents`.
-- **Backups split.** The `main` volume backup no longer contains the documents; they are in the hub's backup, and a restore needs both from around the same time. Check Document Integrity reports the gaps; the export folder (`document_exporter`) is the one snapshot that is consistent with the database.
-- **Uninstalling or wiping the hub deletes the documents** while Paperless keeps their records. The package adds no guard beyond StartOS's dependency warning: review dependents before uninstalling.
+- **Moves the media root.** A temporary container mounts the old and new roots, copies the old one with `cp -a`, writes the store, then empties the old root. If the old root holds no files (ignoring `media.lock`), nothing is copied. If both hold files, the action refuses and changes nothing. A failed copy empties the new root again and leaves the store unchanged; a failure while emptying the old root leaves the store pointing at the complete copy. Needs free space for a second copy while it runs.
+- **Folders must not overlap.** The new root cannot contain or sit inside the old one, and the consume and document folders on one hub must be separate and not nested.
+- **Backups split.** The `main` volume backup no longer contains the documents; they are in the hub's backup, and a restore needs both from around the same time. Check Document Integrity reports the gaps.
+- **Uninstalling or wiping the hub deletes the documents** while Paperless keeps their records. Review dependents before uninstalling.
 - **The folder is writable by anyone with access to it in the hub.** Use one no one else writes to, and leave `documents/thumbnails/` and `media.lock` alone.
-- **NextExplorer:** handled as in Set Consume Folder (the action declares the dependency and runs `add-location`). Nextcloud is not offered as a target; it reads FileBrowser Quantum and NextExplorer live through its own External Storage action.
+- **Nextcloud is not offered as a target**; it reads FileBrowser Quantum and NextExplorer through its own External Storage action.
 
 ### Set Filename Format
 
 Sets the template Paperless uses to name and arrange stored documents. The form offers presets (numbered; year/correspondent/title; correspondent/title; year/document type/title; document type/year/title) and Custom, which takes any template. Numbered, the default, is the empty template and gives names like `0000042.pdf`. The form pre-selects the preset equal to the saved format, or Custom otherwise.
 
 - **What it changes:** `filenameFormat` in the store, and the name and folder of every stored document, through Paperless's own `document_renamer`.
-- **Runnable only while stopped.** The rename runs in a temporary container beside a throwaway Redis on the shared loopback, because the renamer clears Django's Redis-backed document caches for each document it moves and the service's Redis is not running. It has no timeout, since a large library outlasts the 30 s default.
+- **Runnable only while stopped.** The rename runs in a temporary container beside a throwaway Redis, which the renamer needs, with no timeout.
 - **Cost:** time proportional to the library, then a restart for the daemon to pick up the variable. The renamer never overwrites or deletes a file.
 - **The store is written only after the rename succeeds**, including checking the upstream handler's warnings: Paperless logs per-document move failures without failing `document_renamer` itself. A failed run leaves the previous format recorded. A run that fails partway may already have moved some documents, whose database records moved with them; run the action again to finish, and Check Document Integrity to verify.
 - **Storage paths set inside Paperless take precedence** over this format for the documents they are assigned to. Documents without a correspondent land in a `none` folder and move out when one is assigned.
@@ -191,7 +191,7 @@ Sets the template Paperless uses to name and arrange stored documents. The form 
 
 ### Check Document Integrity
 
-Runs Paperless's sanity check (`check_sanity()`, the same one `document_sanity_checker` uses) through `manage.py shell` and shows the findings in one scrollable, copyable multiline field, one line per finding, worst first: `LEVEL: #id title: message`. The command's own output is a Rich table with a progress bar, which the action result would split into dozens of unreadable single-line reports.
+Runs Paperless's sanity check (`check_sanity()`, the same one `document_sanity_checker` uses) through `manage.py shell` and shows the findings in one scrollable, copyable multiline field, one line per finding, worst first: `LEVEL: #id title: message`.
 
 - **Reports:** missing or corrupted original and archive files, missing or unreadable thumbnails, documents without content (info), and files in the media folder that no document refers to (warning).
 - **Cost:** none beyond the run. It reads only, in a temporary container, with no timeout.
@@ -297,7 +297,7 @@ interfaces:
 actions:
   - set-admin-password # temp container, writes to the DB directly, no restart
   - set-consume-folder # writes the store; the daemon re-mounts and restarts
-  - set-document-storage # only-stopped; selects the media root without moving files
+  - set-document-storage # only-stopped; moves the media root to the selected folder
   - set-filename-format # only-stopped; renames stored documents via document_renamer, then writes the store
   - check-integrity # only-stopped; read-only document_sanity_checker
 tasks:
