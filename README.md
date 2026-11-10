@@ -56,14 +56,14 @@ Two images: the application, and a Redis sidecar. The root `Dockerfile` upgrades
 
 One volume, mounted four times at four different subpaths, plus up to two mounts from FileBrowser Quantum or NextExplorer for the consume folder and document storage.
 
-| Volume                  | Subpath       | Mount Point                    | Purpose                                                  |
-| ----------------------- | ------------- | ------------------------------ | -------------------------------------------------------- |
-| `main`                  | `data`        | `…/data`                       | The database and the search index                        |
-| `main`                  | `media`       | `…/media`                      | The stored documents                                     |
-| `main`                  | `consume`     | `…/consume`                    | The private intake folder                                |
-| `main`                  | `export`      | `…/export`                     | Where exports are written                                |
+| Volume                  | Subpath       | Mount Point                    | Purpose                                                            |
+| ----------------------- | ------------- | ------------------------------ | ------------------------------------------------------------------ |
+| `main`                  | `data`        | `…/data`                       | The database and the search index                                  |
+| `main`                  | `media`       | `…/media`                      | The stored documents                                               |
+| `main`                  | `consume`     | `…/consume`                    | The private intake folder                                          |
+| `main`                  | `export`      | `…/export`                     | Where exports are written                                          |
 | `filebrowser` → `data`  | `<subfolder>` | `/mnt/filebrowser/<subfolder>` | A consume or document subfolder in FileBrowser Quantum, read-write |
-| `nextexplorer` → `data` | `<location>`  | `/mnt/nextexplorer/<location>` | A consume or document path in NextExplorer, read-write         |
+| `nextexplorer` → `data` | `<location>`  | `/mnt/nextexplorer/<location>` | A consume or document path in NextExplorer, read-write             |
 
 **All four `main` mounts are required, not just the ones being used.** Django's startup checks verify every one of those paths exists and is writable, and refuse to run otherwise — which is why the same mount set is used by the password action's temporary container as by the daemon itself.
 
@@ -71,9 +71,9 @@ One volume, mounted four times at four different subpaths, plus up to two mounts
 
 **The NextExplorer mounts work the same way while the consume folder or document store points there**: only the chosen paths are mounted, at `/mnt/nextexplorer/<path>`, and `PAPERLESS_CONSUMPTION_DIR` and `PAPERLESS_MEDIA_ROOT` point at them. NextExplorer also serves its volume as uid 1000.
 
-| Path         | Written by  | Holds                                                                                 |
-| ------------ | ----------- | ------------------------------------------------------------------------------------- |
-| `db.sqlite3` | Paperless   | Documents' metadata, tags, users                                                      |
+| Path         | Written by  | Holds                                                                                      |
+| ------------ | ----------- | ------------------------------------------------------------------------------------------ |
+| `db.sqlite3` | Paperless   | Documents' metadata, tags, users                                                           |
 | `store.json` | The package | The admin password, the secret key, consume settings, document storage and filename format |
 
 **Documents are files, and their metadata is a database.** Both are on this volume by default; external document storage moves only the media files to the hub. Neither is much use without the other.
@@ -101,8 +101,8 @@ Paperless's own settings — document types, tags, mail rules, workflows — liv
 
 Two, both optional, and each enabled while the consume folder or document store points at it.
 
-| Dependency          | Id             | Version range               | Required | Kind     | Purpose                              |
-| ------------------- | -------------- | --------------------------- | -------- | -------- | ------------------------------------ |
+| Dependency          | Id             | Version range               | Required | Kind     | Purpose                                       |
+| ------------------- | -------------- | --------------------------- | -------- | -------- | --------------------------------------------- |
 | FileBrowser Quantum | `filebrowser`  | `>=#quantum:2.0.2-stable:3` | No       | `exists` | Hosts consume or document storage, read-write |
 | NextExplorer        | `nextexplorer` | `>=3.1.0:2 && <4.0.0:0`     | No       | `exists` | Hosts consume or document storage, read-write |
 
@@ -162,7 +162,7 @@ Chooses where Paperless watches for new documents: the private `consume` subpath
 - **Cost:** a restart. The daemon reads both values reactively, mounts just the chosen subfolder of FileBrowser Quantum's volume when selected, and points `PAPERLESS_CONSUMPTION_DIR` at it; StartOS creates the subfolder if it is missing when it mounts it. The subfolder must name a folder inside the volume: the action refuses `..` and paths made only of `/` and `.`.
 - **Runnable at any status.** Selecting FileBrowser Quantum before it is installed is accepted, but Paperless then fails to start, since the volume it mounts is missing; the dependency warning says why. Install FileBrowser Quantum, then start Paperless.
 - **NextExplorer:** refused unless NextExplorer is installed. The action declares the dependency, then runs NextExplorer's `add-location` itself (`access: 'dependent'`), which creates the location or accepts one that already exists, and writes the store only once that succeeds. A name NextExplorer rejects leaves the previous choice in place.
-- **Subfolders (opt-in):** *Watch Subfolders* sets `PAPERLESS_CONSUMER_RECURSIVE`; without it Paperless ignores everything inside a subfolder of the consume folder. *Subfolders as Tags* additionally sets `PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS`, tagging each document with the names of the folders it came from, and has no effect unless the first is on. Both default off and are stored as `consumeRecursive` and `consumeSubdirsAsTags`.
+- **Subfolders (opt-in):** _Watch Subfolders_ sets `PAPERLESS_CONSUMER_RECURSIVE`; without it Paperless ignores everything inside a subfolder of the consume folder. _Subfolders as Tags_ additionally sets `PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS`, tagging each document with the names of the folders it came from, and has no effect unless the first is on. Both default off and are stored as `consumeRecursive` and `consumeSubdirsAsTags`.
 - **Repeat safety:** switching away keeps the last subfolder and location, so each is pre-filled if selected again. Files left in any folder are not moved.
 
 ### Set Document Storage
@@ -171,7 +171,7 @@ Chooses where Paperless keeps its whole media root (originals, archive copies, t
 
 - **What it changes:** `storageSource`, and `storageFilebrowserSubfolder` or `storageNextexplorerLocation`, in the store. The daemon mounts just that folder and sets `PAPERLESS_MEDIA_ROOT`; Check Document Integrity and Set Filename Format do the same.
 - **Runnable only while stopped.**
-- **Moves the media root.** A temporary container mounts the old and new roots, copies the old one with `cp -a`, writes the store, then empties the old root. If the old root holds no files (ignoring `media.lock`), nothing is copied. If both hold files, the action refuses and changes nothing. A failed copy empties the new root again and leaves the store unchanged; a failure while emptying the old root leaves the store pointing at the complete copy. Needs free space for a second copy while it runs.
+- **Moves the media root.** A temporary container copies with `cp -a`, records the new location, then empties the old root. An empty source needs no copy. When the source holds files, a destination with files or symlinks is refused; only a regular `media.lock` is ignored. Inspection errors abort the switch. A failed copy empties the new root again and leaves the store unchanged; a failure while emptying the old root leaves the store pointing at the complete copy. Needs space for a second copy while it runs.
 - **Folders must not overlap.** The new root cannot contain or sit inside the old one, and the consume and document folders on one hub must be separate and not nested.
 - **Backups split.** The `main` volume backup no longer contains the documents; they are in the hub's backup, and a restore needs both from around the same time. Check Document Integrity reports the gaps.
 - **Uninstalling or wiping the hub deletes the documents** while Paperless keeps their records. Review dependents before uninstalling.

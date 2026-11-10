@@ -167,9 +167,13 @@ export const setDocumentStorage = sdk.Action.withInput(
 
 const copyScript = `
 src=$1 dst=$2
-has_files() { [ -n "$(find "$1" -type f ! -path "$1/media.lock" -print -quit)" ]; }
-has_files "$src" || { echo empty; exit 0; }
-has_files "$dst" && { echo occupied; exit 0; }
+media_entries() {
+  find "$1" -mindepth 1 ! -type d ! '(' -path "$1/media.lock" -type f ')' -print -quit
+}
+src_entries=$(media_entries "$src") || exit 1
+[ -n "$src_entries" ] || { echo empty; exit 0; }
+dst_entries=$(media_entries "$dst") || exit 1
+[ -z "$dst_entries" ] || { echo occupied; exit 0; }
 cp -a "$src"/. "$dst"/ || { find "$dst" -mindepth 1 -delete; exit 1; }
 echo copied
 `
