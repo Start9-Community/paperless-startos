@@ -1,8 +1,16 @@
+import { T } from '@start9labs/start-sdk'
 import { dependencies, nextexplorerVersionRange } from '../dependencies'
 import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
-import { defaultConsumeLocation, defaultConsumeSubfolder } from '../utils'
+import {
+  assertSeparateHubFolders,
+  cleanFolder,
+  locationOf,
+  mediaFolderOf,
+  newConsumeLocation,
+  newConsumeSubfolder,
+} from '../utils'
 
 const { InputSpec, Value, Variants } = sdk
 
@@ -26,9 +34,9 @@ export const inputSpec = InputSpec.of({
             description: i18n(
               'Folder inside FileBrowser Quantum that Paperless-ngx watches. Created automatically; FileBrowser Quantum must be installed.',
             ),
-            default: defaultConsumeSubfolder,
+            default: newConsumeSubfolder,
             required: true,
-            placeholder: defaultConsumeSubfolder,
+            placeholder: newConsumeSubfolder,
             patterns: [
               {
                 regex: '^(?!(.*/)?\\.\\.(/|$))(?=.*[^./\\s]).*$',
@@ -46,17 +54,61 @@ export const inputSpec = InputSpec.of({
           location: Value.text({
             name: i18n('NextExplorer Location'),
             description: i18n(
-              'Location in NextExplorer that Paperless-ngx watches. Added to NextExplorer if it does not exist; NextExplorer must be installed.',
+              'Path in NextExplorer that Paperless-ngx watches. Its first folder is the NextExplorer location, such as Files, and is added to NextExplorer if it does not exist; NextExplorer must be installed.',
             ),
-            default: defaultConsumeLocation,
+            default: newConsumeLocation,
             required: true,
-            placeholder: defaultConsumeLocation,
+            placeholder: newConsumeLocation,
           }),
         }),
       },
     }),
   }),
+  recursive: Value.toggle({
+    name: i18n('Watch Subfolders'),
+    description: i18n(
+      'Also import documents placed in subfolders of the consume folder. Off by default: Paperless-ngx otherwise ignores everything inside a subfolder.',
+    ),
+    default: false,
+  }),
+  subdirsAsTags: Value.toggle({
+    name: i18n('Subfolders as Tags'),
+    description: i18n(
+      'Tag each imported document with the names of the subfolders it came from. Needs Watch Subfolders.',
+    ),
+    default: false,
+  }),
 })
+
+// add-location admits only a declared dependent, and the store must not name the location until it exists.
+export async function ensureNextexplorerLocation(
+  effects: T.Effects,
+  location: string,
+) {
+  if (!(await sdk.getInstalledPackages(effects)).includes('nextexplorer')) {
+    throw new Error(i18n('Install NextExplorer first'))
+  }
+  await effects.setDependencies({
+    dependencies: [
+      {
+        id: 'nextexplorer',
+        kind: 'exists',
+        versionRange: nextexplorerVersionRange,
+      },
+    ],
+  })
+  try {
+    await sdk.action.run({
+      effects,
+      packageId: 'nextexplorer',
+      actionId: 'add-location',
+      input: () => ({ name: location }),
+    })
+  } catch (e) {
+    await dependencies.init(effects)
+    throw e
+  }
+}
 
 export const setConsumeFolder = sdk.Action.withInput(
   'set-consume-folder',
@@ -76,13 +128,22 @@ export const setConsumeFolder = sdk.Action.withInput(
 
   async () => {
     const store = await storeJson.read().once()
-    const subfolder = store?.filebrowserSubfolder ?? defaultConsumeSubfolder
-    const location = store?.nextexplorerLocation ?? defaultConsumeLocation
+    // A saved choice pre-fills its own fields; the other hub offers the nested defaults.
+    const subfolder =
+      store?.consumeSource === 'filebrowser'
+        ? store.filebrowserSubfolder
+        : newConsumeSubfolder
+    const location =
+      store?.consumeSource === 'nextexplorer'
+        ? store.nextexplorerLocation
+        : newConsumeLocation
     const other = {
       filebrowser: { subfolder },
       nextexplorer: { location },
     }
     return {
+      recursive: store?.consumeRecursive ?? false,
+      subdirsAsTags: store?.consumeSubdirsAsTags ?? false,
       source:
         store?.consumeSource === 'filebrowser'
           ? { selection: 'filebrowser' as const, value: { subfolder }, other }
@@ -93,47 +154,43 @@ export const setConsumeFolder = sdk.Action.withInput(
   },
 
   async ({ effects, input }) => {
+    const subfolderOptions = {
+      consumeRecursive: input.recursive,
+      consumeSubdirsAsTags: input.recursive && input.subdirsAsTags,
+    }
+    const store = await storeJson.read().once()
+    const mediaFolder = store ? mediaFolderOf(store) : null
     if (input.source.selection !== 'nextexplorer') {
+      const subfolder =
+        input.source.selection === 'filebrowser'
+          ? cleanFolder(input.source.value.subfolder)
+          : ''
+      assertSeparateHubFolders(
+        input.source.selection === 'filebrowser'
+          ? { source: 'filebrowser', subfolder }
+          : null,
+        mediaFolder,
+      )
       await storeJson.merge(
         effects,
         input.source.selection === 'filebrowser'
           ? {
               consumeSource: 'filebrowser',
-              filebrowserSubfolder: input.source.value.subfolder,
+              filebrowserSubfolder: subfolder,
+              ...subfolderOptions,
             }
-          : { consumeSource: 'local' },
+          : { consumeSource: 'local', ...subfolderOptions },
       )
       return null
     }
 
-    if (!(await sdk.getInstalledPackages(effects)).includes('nextexplorer')) {
-      throw new Error(i18n('Install NextExplorer first'))
-    }
-    const location = input.source.value.location.trim()
-    // add-location admits only a declared dependent, and the store must not name the location until it exists.
-    await effects.setDependencies({
-      dependencies: [
-        {
-          id: 'nextexplorer',
-          kind: 'exists',
-          versionRange: nextexplorerVersionRange,
-        },
-      ],
-    })
-    try {
-      await sdk.action.run({
-        effects,
-        packageId: 'nextexplorer',
-        actionId: 'add-location',
-        input: () => ({ name: location }),
-      })
-    } catch (e) {
-      await dependencies.init(effects)
-      throw e
-    }
+    const location = cleanFolder(input.source.value.location)
+    assertSeparateHubFolders({ source: 'nextexplorer', location }, mediaFolder)
+    await ensureNextexplorerLocation(effects, locationOf(location))
     await storeJson.merge(effects, {
       consumeSource: 'nextexplorer',
       nextexplorerLocation: location,
+      ...subfolderOptions,
     })
 
     return {

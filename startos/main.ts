@@ -1,15 +1,16 @@
 import { T, utils } from '@start9labs/start-sdk'
-import { manifest as filebrowserManifest } from 'filebrowser-quantum-startos/startos/manifest'
-import { manifest as nextexplorerManifest } from 'nextexplorer-startos/startos/manifest'
 import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
 import { uiHostId, uiInterfaceId } from './interfaces'
 import { sdk } from './sdk'
 import {
+  consumeFolderOf,
   consumeMountpoint,
-  filebrowserMountpoint,
-  nextexplorerMountpoint,
-  paperlessMounts,
+  HubFolder,
+  hubMounts,
+  hubPath,
+  mediaEnv,
+  mediaFolderOf,
   redisPort,
   uiPort,
 } from './utils'
@@ -34,13 +35,18 @@ export function paperlessDaemons(
     secretKey,
     trustedOrigins,
     consumeFolder,
+    mediaFolder,
+    consumeRecursive,
+    consumeSubdirsAsTags,
+    filenameFormat,
   }: {
     secretKey: string
     trustedOrigins: string
-    consumeFolder:
-      | { source: 'filebrowser'; subfolder: string }
-      | { source: 'nextexplorer'; location: string }
-      | null
+    consumeFolder: HubFolder
+    mediaFolder: HubFolder
+    consumeRecursive: boolean
+    consumeSubdirsAsTags: boolean
+    filenameFormat: string
   },
 ) {
   return sdk.Daemons.of(effects)
@@ -78,23 +84,7 @@ export function paperlessDaemons(
       subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'paperless' },
-        consumeFolder?.source === 'filebrowser'
-          ? paperlessMounts.mountDependency<typeof filebrowserManifest>({
-              dependencyId: 'filebrowser',
-              volumeId: 'data',
-              subpath: consumeFolder.subfolder,
-              mountpoint: `${filebrowserMountpoint}/${consumeFolder.subfolder}`,
-              readonly: false,
-            })
-          : consumeFolder?.source === 'nextexplorer'
-            ? paperlessMounts.mountDependency<typeof nextexplorerManifest>({
-                dependencyId: 'nextexplorer',
-                volumeId: 'data',
-                subpath: consumeFolder.location,
-                mountpoint: `${nextexplorerMountpoint}/${consumeFolder.location}`,
-                readonly: false,
-              })
-            : paperlessMounts,
+        hubMounts(consumeFolder, mediaFolder),
         'paperless-app',
       ),
       exec: {
@@ -109,12 +99,17 @@ export function paperlessDaemons(
           PAPERLESS_CSRF_TRUSTED_ORIGINS: trustedOrigins,
           PAPERLESS_TIME_ZONE: 'UTC',
           PAPERLESS_OCR_LANGUAGE: 'eng',
-          PAPERLESS_CONSUMPTION_DIR:
-            consumeFolder?.source === 'filebrowser'
-              ? `${filebrowserMountpoint}/${consumeFolder.subfolder}`
-              : consumeFolder?.source === 'nextexplorer'
-                ? `${nextexplorerMountpoint}/${consumeFolder.location}`
-                : consumeMountpoint,
+          PAPERLESS_CONSUMPTION_DIR: consumeFolder
+            ? hubPath(consumeFolder)
+            : consumeMountpoint,
+          ...mediaEnv(mediaFolder),
+          ...(consumeRecursive ? { PAPERLESS_CONSUMER_RECURSIVE: 'true' } : {}),
+          ...(consumeRecursive && consumeSubdirsAsTags
+            ? { PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: 'true' }
+            : {}),
+          ...(filenameFormat
+            ? { PAPERLESS_FILENAME_FORMAT: filenameFormat }
+            : {}),
           USERMAP_UID: '1000',
           USERMAP_GID: '1000',
         },
@@ -133,29 +128,24 @@ export function paperlessDaemons(
 }
 
 export const main = sdk.setupMain(async ({ effects }) => {
-  const secretKey = await storeJson.read((s) => s.secretKey).const(effects)
-  if (!secretKey) {
+  // Leaves out adminPassword, so resetting it does not restart the service.
+  const options = await storeJson
+    .read((s) => ({
+      secretKey: s.secretKey,
+      consumeFolder: consumeFolderOf(s),
+      mediaFolder: mediaFolderOf(s),
+      consumeRecursive: s.consumeRecursive,
+      consumeSubdirsAsTags: s.consumeSubdirsAsTags,
+      filenameFormat: s.filenameFormat,
+    }))
+    .const(effects)
+  if (!options?.secretKey) {
     throw new Error('store.json is missing the generated secret key')
   }
   return paperlessDaemons(effects, {
-    secretKey,
+    ...options,
     trustedOrigins: (
       await sdk.host.getOwn(effects, uiHostId, uiUrls).const()
     ).join(','),
-    consumeFolder: await storeJson
-      .read((s) =>
-        s.consumeSource === 'filebrowser'
-          ? {
-              source: 'filebrowser' as const,
-              subfolder: s.filebrowserSubfolder,
-            }
-          : s.consumeSource === 'nextexplorer'
-            ? {
-                source: 'nextexplorer' as const,
-                location: s.nextexplorerLocation,
-              }
-            : null,
-      )
-      .const(effects),
   })
 })

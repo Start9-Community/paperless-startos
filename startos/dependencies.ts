@@ -18,8 +18,13 @@ export const dependencies = sdk.Dependencies.of()
       versionRange: '>=#quantum:2.0.2-stable:3',
       kind: 'exists',
       enabled: async ({ effects }) =>
-        (await storeJson.read((s) => s.consumeSource).const(effects)) ===
-        'filebrowser',
+        (await storeJson
+          .read(
+            (s) =>
+              s.consumeSource === 'filebrowser' ||
+              s.storageSource === 'filebrowser',
+          )
+          .const(effects)) === true,
     }),
   )
   .addDependency(
@@ -32,7 +37,12 @@ export const dependencies = sdk.Dependencies.of()
       versionRange: nextexplorerVersionRange,
       kind: 'exists',
       enabled: async ({ effects }) =>
-        (await storeJson.read((s) => s.consumeSource).const(effects)) ===
-        'nextexplorer',
+        (await storeJson
+          .read(
+            (s) =>
+              s.consumeSource === 'nextexplorer' ||
+              s.storageSource === 'nextexplorer',
+          )
+          .const(effects)) === true,
     }),
   )

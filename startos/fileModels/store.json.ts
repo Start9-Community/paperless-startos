@@ -1,6 +1,11 @@
 import { FileHelper, z } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
-import { defaultConsumeLocation, defaultConsumeSubfolder } from '../utils'
+import {
+  defaultConsumeLocation,
+  defaultConsumeSubfolder,
+  defaultStorageLocation,
+  defaultStorageSubfolder,
+} from '../utils'
 
 const shape = z.looseObject({
   adminPassword: z.string().catch(''),
@@ -12,6 +17,14 @@ const shape = z.looseObject({
     .catch('local'),
   filebrowserSubfolder: z.string().catch(defaultConsumeSubfolder),
   nextexplorerLocation: z.string().catch(defaultConsumeLocation),
+  filenameFormat: z.string().catch(''),
+  consumeRecursive: z.boolean().catch(false),
+  consumeSubdirsAsTags: z.boolean().catch(false),
+  storageSource: z
+    .enum(['local', 'filebrowser', 'nextexplorer'])
+    .catch('local'),
+  storageFilebrowserSubfolder: z.string().catch(defaultStorageSubfolder),
+  storageNextexplorerLocation: z.string().catch(defaultStorageLocation),
 })
 
 export const storeJson = FileHelper.json(
